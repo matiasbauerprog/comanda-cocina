@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { parseLocalISODate, toLocalISODate } from '../lib/dates';
 
 export default function CalendarPicker({ selectedDate, onSelect }) {
     const initialDate = selectedDate ? parseLocalISODate(selectedDate) : new Date();
     const [currentMonth, setCurrentMonth] = useState(initialDate);
 
-    const daysOfWeek = ['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'];
+    const daysOfWeek = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
 
     // Helper to get days in month
     const getDaysInMonth = (date) => {
@@ -49,42 +49,42 @@ export default function CalendarPicker({ selectedDate, onSelect }) {
 
     const isSelected = (date) => selectedDate === toLocalISODate(date);
 
+    const today = toLocalISODate(new Date());
+
     return (
-        <div className="bg-[#E9EDE0] rounded-3xl p-6 w-[320px] shadow-xl animate-card-in select-none border border-[#dee2d5]">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8 px-2">
-                <h2 className="text-[17px] font-medium text-slate-800 lowercase tracking-tight">
+        <div className="bg-surface border border-line rounded-2xl p-4 w-[320px] shadow-[0_16px_40px_rgba(11,27,46,0.16)] animate-card-in select-none">
+            <div className="flex items-center justify-between mb-3 px-1">
+                <h2 className="font-display text-[17px] font-bold tracking-[-0.02em] text-ink first-letter:uppercase">
                     {monthName}
                 </h2>
-                <div className="flex gap-4">
-                    <button onClick={() => changeMonth(-1)} className="text-slate-500 hover:text-slate-800 transition-colors">
-                        <ChevronUp className="w-5 h-5" />
+                <div className="flex gap-1">
+                    <button type="button" onClick={() => changeMonth(-1)} className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-2 hover:bg-paper cursor-pointer" title="Mes anterior">
+                        <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <button onClick={() => changeMonth(1)} className="text-slate-500 hover:text-slate-800 transition-colors">
-                        <ChevronDown className="w-5 h-5" />
+                    <button type="button" onClick={() => changeMonth(1)} className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-2 hover:bg-paper cursor-pointer" title="Mes siguiente">
+                        <ChevronRight className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            {/* Weekdays */}
-            <div className="grid grid-cols-7 mb-4">
+            <div className="grid grid-cols-7 mb-1">
                 {daysOfWeek.map(day => (
-                    <span key={day} className="text-[11px] font-bold text-slate-900 text-center">{day}</span>
+                    <span key={day} className="text-[11px] font-semibold text-ink-3 text-center py-1">{day}</span>
                 ))}
             </div>
 
-            {/* Days Grid */}
-            <div className="grid grid-cols-7 gap-y-2">
+            <div className="grid grid-cols-7 gap-y-1">
                 {days.map((item, idx) => {
+                    const iso = toLocalISODate(item.date);
                     const selected = isSelected(item.date);
                     return (
-                        <div key={idx} className="flex justify-center items-center h-10">
+                        <div key={idx} className="flex justify-center items-center">
                             <button
-                                onClick={() => onSelect(toLocalISODate(item.date))}
-                                className={`
-                                    w-10 h-10 rounded-full text-sm transition-all duration-300
-                                    ${item.current ? 'text-slate-800 font-medium' : 'text-slate-400'}
-                                    ${selected ? 'bg-[#0061C2] !text-white font-bold scale-110 shadow-lg' : 'hover:bg-slate-200/50'}
+                                type="button"
+                                onClick={() => onSelect(iso)}
+                                className={`w-9 h-9 rounded-full font-mono text-[13px] transition-colors cursor-pointer
+                                    ${item.current ? 'text-ink' : 'text-ink-4'}
+                                    ${selected ? 'bg-brand-navy !text-white font-semibold' : iso === today ? 'ring-1 ring-brand-navy/40 hover:bg-paper' : 'hover:bg-paper'}
                                 `}
                             >
                                 {item.day}

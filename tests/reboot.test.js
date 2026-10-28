@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { topPlatos } from '../src/lib/pedidos.js';
+import { topPlatos, pedidoDisplayItems } from '../src/lib/pedidos.js';
 import { searchPlatos, addLine } from '../src/lib/orderForm.js';
 import { historyTitle } from '../src/lib/dates.js';
 import { computeAnalyticsKPIs } from '../src/store/kpis.js';
+import { countdownLabel } from '../src/lib/urgency.js';
 
 const carta = [
     { id: 1, nombre: 'Milanesa', monto: 100 },
@@ -45,4 +46,17 @@ test('computeAnalyticsKPIs incluye la distribución de pago', () => {
     const k = computeAnalyticsKPIs([p(300, 'Efectivo'), p(100, 'Tarjeta')], []);
     assert.deepEqual(k.distribucionPago, { efectivo: 300, tarjeta: 100, pctEfectivo: 75 });
     assert.deepEqual(computeAnalyticsKPIs([], []).distribucionPago, { efectivo: 0, tarjeta: 0, pctEfectivo: 0 });
+});
+
+test('countdownLabel con el texto del reboot', () => {
+    assert.equal(countdownLabel(null), 'Sin horario');
+    assert.equal(countdownLabel(0), 'Atrasado 0 min');
+    assert.equal(countdownLabel(-4), 'Atrasado 4 min');
+    assert.equal(countdownLabel(12), 'en 12 min');
+    assert.equal(countdownLabel(65), 'en 1 h 05');
+});
+
+test('pedidoDisplayItems conserva el nombre tal cual se cargó', () => {
+    assert.deepEqual(pedidoDisplayItems('(2) Milanesa napolitana, Flan'), [{ qty: 2, name: 'Milanesa napolitana' }, { qty: 1, name: 'Flan' }]);
+    assert.deepEqual(pedidoDisplayItems(''), []);
 });

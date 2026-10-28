@@ -1,15 +1,12 @@
 import { useState } from 'react';
-import { Edit3, X, Check, Trash2, MapPin } from 'lucide-react';
+import { Pencil, X, Check, Trash2, MapPin, MessageSquareText } from 'lucide-react';
 import { useOrderUrgency } from '../hooks/useOrderUrgency';
-import { formatOrderStart } from '../lib/dates';
-
-const URGENCY_STYLES = {
-    none: { border: 'border-slate-200/60', badge: 'bg-slate-100 text-slate-400' },
-    calm: { border: 'border-brand-navy/30', badge: 'bg-brand-navy/10 text-brand-navy' },
-    soon: { border: 'border-brand-yellow/60', badge: 'bg-brand-yellow text-amber-900' },
-    urgent: { border: 'border-brand-red/50', badge: 'bg-brand-red text-white' },
-    late: { border: 'border-brand-red shadow-lg shadow-brand-red/10', badge: 'bg-brand-red text-white' },
-};
+import { formatTime } from '../lib/dates';
+import { pedidoDisplayItems } from '../lib/pedidos';
+import { URGENCY_THEME, countdownLabel } from '../lib/urgency';
+import { formatMoney } from '../lib/format';
+import PayBadge from './ui/PayBadge';
+import { useToast } from './ui/Toast';
 
 function toEditForm(order) {
     return {
@@ -23,9 +20,13 @@ function toEditForm(order) {
     };
 }
 
+const editInput = "w-full h-10 bg-surface border border-line-strong rounded-[9px] px-3 text-sm text-ink focus:outline-none focus:border-ink-3";
+const iconButton = "w-8 h-8 rounded-lg flex items-center justify-center text-ink-3 transition-colors cursor-pointer disabled:opacity-50";
+
 export default function DailyOrderCard({ order, onSave, onDelete, onReady }) {
-    const { urgency, countdownText } = useOrderUrgency(order);
-    const s = URGENCY_STYLES[urgency];
+    const { urgency, minutesLeft } = useOrderUrgency(order);
+    const theme = URGENCY_THEME[urgency];
+    const toast = useToast();
     const [editForm, setEditForm] = useState(null);
     const [busy, setBusy] = useState(false);
     const isEditing = editForm !== null;
@@ -55,159 +56,118 @@ export default function DailyOrderCard({ order, onSave, onDelete, onReady }) {
         run(() => onDelete(order.id));
     };
 
+    const handleReady = async () => {
+        if (await run(() => onReady(order.id))) toast(`${order.cliente.nombre} despachado`);
+    };
+
+    const set = (key) => (e) => setEditForm(f => ({ ...f, [key]: e.target.value }));
+
     return (
-        <div className={`glass-card rounded-[1.5rem] p-5 relative transition-all duration-500 hover:shadow-xl hover:shadow-brand-navy/5 group w-full max-w-[440px] border-2 ${s.border}`}>
+        <article
+            className="bg-surface rounded-2xl overflow-hidden flex flex-col border"
+            style={{ borderColor: theme.border, boxShadow: urgency === 'late' ? '0 6px 20px rgba(230,0,0,0.14)' : 'none' }}
+        >
+            <div className="flex items-center justify-between px-3.5 py-2.5" style={{ background: theme.stripBg, color: theme.stripFg }}>
+                <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-xl font-semibold tracking-[-0.02em]">{order.horario_entrega || '--:--'}</span>
+                    <span className="text-xs font-semibold">{countdownLabel(minutesLeft)}</span>
+                </div>
+                <span className="text-[11px] opacity-80">Ingresó {formatTime(order.timestamp_creacion)}</span>
+            </div>
+
             {isEditing ? (
-                <div className="space-y-3">
-                    <input
-                        value={editForm.nombre}
-                        onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-sm font-black text-brand-navy outline-none focus:ring-2 focus:ring-slate-900/5 focus:bg-white transition-all"
-                        placeholder="Cliente"
-                    />
-                    <input
-                        value={editForm.direccion}
-                        onChange={e => setEditForm(f => ({ ...f, direccion: e.target.value }))}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs text-slate-500 font-medium outline-none focus:ring-2 focus:ring-slate-900/5 focus:bg-white transition-all"
-                        placeholder="Dirección"
-                    />
-                    <textarea
-                        value={editForm.pedido}
-                        onChange={e => setEditForm(f => ({ ...f, pedido: e.target.value }))}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs text-slate-700 font-medium resize-none outline-none focus:ring-2 focus:ring-slate-900/5 focus:bg-white transition-all"
-                        rows={2}
-                        placeholder="Pedido"
-                    />
+                <div className="p-3.5 flex flex-col gap-2.5">
+                    <input value={editForm.nombre} onChange={set('nombre')} className={`${editInput} font-semibold`} placeholder="Cliente" />
+                    <input value={editForm.direccion} onChange={set('direccion')} className={editInput} placeholder="Dirección" />
+                    <textarea value={editForm.pedido} onChange={set('pedido')} rows={2} className={`${editInput} h-auto py-2 resize-none`} placeholder="Pedido" />
                     <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Pago</label>
-                            <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                                {['Efectivo', 'Tarjeta'].map(m => (
-                                    <button
-                                        key={m}
-                                        type="button"
-                                        onClick={() => setEditForm(f => ({ ...f, metodo_pago: m }))}
-                                        className={`flex-1 py-1 rounded-md text-[9px] font-black uppercase transition-all ${editForm.metodo_pago === m
-                                            ? (m === 'Tarjeta' ? 'bg-brand-navy text-white' : 'bg-emerald-600 text-white')
-                                            : 'text-slate-400 hover:text-slate-600'
-                                            }`}
-                                    >
-                                        {m}
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="flex bg-paper p-[3px] rounded-[9px] h-10">
+                            {['Efectivo', 'Tarjeta'].map(m => (
+                                <button
+                                    key={m}
+                                    type="button"
+                                    onClick={() => setEditForm(f => ({ ...f, metodo_pago: m }))}
+                                    className={`flex-1 rounded-md text-xs font-semibold cursor-pointer ${editForm.metodo_pago === m
+                                        ? (m === 'Efectivo' ? 'bg-[#0E7A4B] text-white' : 'bg-brand-navy text-white')
+                                        : 'text-ink-2'
+                                        }`}
+                                >
+                                    {m}
+                                </button>
+                            ))}
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Entrega</label>
-                            <input
-                                type="time"
-                                value={editForm.horario_entrega || ''}
-                                onChange={e => setEditForm(f => ({ ...f, horario_entrega: e.target.value }))}
-                                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-1.5 text-[11px] font-bold text-slate-700 outline-none focus:bg-white"
-                            />
-                        </div>
+                        <input type="time" value={editForm.horario_entrega} onChange={set('horario_entrega')} className={`${editInput} font-mono`} />
                     </div>
-                    <textarea
-                        value={editForm.observaciones || ''}
-                        onChange={e => setEditForm(f => ({ ...f, observaciones: e.target.value }))}
-                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[10px] text-slate-500 font-medium resize-none outline-none focus:bg-white"
-                        rows={1}
-                        placeholder="Observaciones"
-                    />
+                    <input value={editForm.observaciones} onChange={set('observaciones')} className={editInput} placeholder="Observaciones" />
                     <div className="flex gap-2">
                         <div className="flex-1 relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xs">$</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-ink-3">$</span>
                             <input
                                 type="number"
                                 value={editForm.monto}
-                                onChange={e => setEditForm(f => ({ ...f, monto: e.target.value }))}
-                                className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-6 pr-3 py-2 text-sm text-brand-navy font-display font-black outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                onChange={set('monto')}
+                                className={`${editInput} pl-6 font-mono font-semibold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                                 placeholder="Monto"
                             />
                         </div>
-                        <button onClick={saveEdit} disabled={busy} className="p-2 rounded-xl bg-brand-navy text-white hover:bg-black transition-all">
+                        <button type="button" onClick={saveEdit} disabled={busy} className="h-10 px-3 rounded-[9px] bg-brand-navy text-white flex items-center gap-1.5 text-[13px] font-semibold cursor-pointer disabled:opacity-50">
                             <Check className="w-4 h-4" />
+                            Guardar
                         </button>
-                        <button onClick={() => setEditForm(null)} className="p-2 rounded-xl bg-slate-100 text-slate-400 hover:bg-slate-200 transition-all">
+                        <button type="button" onClick={() => setEditForm(null)} className="h-10 w-10 rounded-[9px] bg-paper text-ink-2 hover:bg-track flex items-center justify-center cursor-pointer" title="Cancelar">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
             ) : (
                 <>
-                    {/* 1. Header: Client & Actions */}
-                    <div className="flex justify-between items-start mb-3">
-                        <div className="flex flex-col pr-8">
-                            <h3 className="font-black text-brand-navy uppercase tracking-tighter text-[15px] leading-tight">
-                                {order.cliente.nombre}
-                            </h3>
-                            {order.cliente.direccion && (
-                                <span className="text-slate-400 font-bold text-[10px] uppercase tracking-wide flex items-center gap-1 mt-0.5">
-                                    <MapPin className="w-3 h-3" /> {order.cliente.direccion}
-                                </span>
-                            )}
-                        </div>
-                        <div className="flex gap-1 shrink-0">
-                            <button onClick={() => setEditForm(toEditForm(order))} className="p-1.5 text-slate-300 hover:text-brand-navy hover:bg-slate-50 rounded-lg transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
-                            <button onClick={handleDelete} disabled={busy} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                        </div>
-                    </div>
-
-                    {/* 2. Sub-Header: Times */}
-                    <div className="flex gap-4 mb-3 pb-3 border-b border-slate-50">
-                        <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mb-0.5">Inicio</span>
-                            <span className="text-[11px] font-bold text-slate-500">
-                                {formatOrderStart(order.timestamp_creacion)}
+                    <div className="px-3.5 pt-3.5 pb-3 flex flex-col gap-[3px]">
+                        <span className="text-base font-semibold text-ink tracking-[-0.01em]">{order.cliente.nombre}</span>
+                        {order.cliente.direccion && (
+                            <span className="flex items-center gap-[5px] text-xs text-ink-3">
+                                <MapPin className="w-3 h-3 shrink-0" />
+                                {order.cliente.direccion}
                             </span>
-                        </div>
-                        {order.horario_entrega && (
-                            <div className="flex flex-col border-l border-slate-100 pl-4">
-                                <span className="text-[9px] font-black text-brand-navy/40 uppercase tracking-widest leading-none mb-0.5 whitespace-nowrap">Entrega</span>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[11px] font-black text-brand-navy">
-                                        {order.horario_entrega}
-                                    </span>
-                                    {countdownText && (
-                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full tracking-tighter ${s.badge}`}>
-                                            {countdownText}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
                         )}
                     </div>
-
-                    {/* 3. Body: Order & Notes */}
-                    <div className="mb-4 min-h-[40px]">
-                        <p className="text-slate-600 text-xs font-bold leading-relaxed break-words">{order.pedido}</p>
+                    <div className="mx-3.5 border-t border-dashed border-line-strong" />
+                    <div className="px-3.5 py-2.5 flex flex-col gap-[5px]">
+                        {pedidoDisplayItems(order.pedido).map((it, i) => (
+                            <div key={i} className="flex gap-2.5 text-sm text-ink">
+                                <span className="font-mono font-semibold min-w-[22px] text-ink-2">{it.qty}×</span>
+                                <span>{it.name}</span>
+                            </div>
+                        ))}
                         {order.observaciones && (
-                            <div className="mt-2 text-[9px] font-black text-slate-400 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100 inline-block uppercase tracking-widest break-words max-w-full">
+                            <div className="mt-1.5 flex gap-[7px] items-start bg-note-bg text-note rounded-lg px-[9px] py-[7px] text-xs font-medium">
+                                <MessageSquareText className="w-[13px] h-[13px] mt-px shrink-0" />
                                 {order.observaciones}
                             </div>
                         )}
                     </div>
-
-                    {/* 4. Footer: Price & Actions */}
-                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
-                        <div className="flex flex-col">
-                            <span className={`text-2xl font-display font-black tracking-tighter leading-none ${order.metodo_pago === 'Efectivo' ? 'text-emerald-600' : 'text-brand-navy'}`}>
-                                ${order.monto.toLocaleString('es-AR')}
-                            </span>
-                            <span className={`text-[9px] font-black uppercase tracking-widest mt-1 ${order.metodo_pago === 'Efectivo' ? 'text-emerald-600' : 'text-brand-navy'}`}>
-                                {order.metodo_pago}
-                            </span>
+                    <div className="mt-auto pl-3.5 pr-2.5 py-2.5 border-t border-line-soft flex items-center gap-2">
+                        <div className="flex-1 flex items-center gap-2 min-w-0">
+                            <span className="font-mono text-[15px] font-semibold text-ink">{formatMoney(order.monto)}</span>
+                            <PayBadge metodo={order.metodo_pago} />
                         </div>
+                        <button type="button" onClick={() => setEditForm(toEditForm(order))} className={`${iconButton} hover:bg-paper hover:text-ink`} title="Editar">
+                            <Pencil className="w-[15px] h-[15px]" />
+                        </button>
+                        <button type="button" onClick={handleDelete} disabled={busy} className={`${iconButton} hover:bg-danger-bg hover:text-danger`} title="Eliminar">
+                            <Trash2 className="w-[15px] h-[15px]" />
+                        </button>
                         <button
-                            onClick={() => run(() => onReady(order.id))}
+                            type="button"
+                            onClick={handleReady}
                             disabled={busy}
-                            className="bg-brand-red hover:bg-brand-red/90 text-white text-[10px] font-black px-5 py-2.5 rounded-xl shadow-lg shadow-brand-red/20 hover:shadow-xl active:scale-95 transition-all uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
+                            className="h-[34px] px-3 rounded-[9px] bg-brand-navy hover:bg-[#001A3A] text-white text-[13px] font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                         >
-                            DESPACHAR
+                            <Check className="w-3.5 h-3.5" />
+                            Despachar
                         </button>
                     </div>
                 </>
             )}
-        </div>
+        </article>
     );
 }

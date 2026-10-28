@@ -7,3 +7,11 @@ export const URGENCY_THEME = {
     urgent: { stripBg: '#FDE3E3', stripFg: '#A30000', border: '#F5B5B5', kBg: '#FF6B6B', kFg: '#2A0000', kBorder: '#FF6B6B' },
     late: { stripBg: '#E60000', stripFg: '#FFFFFF', border: '#E60000', kBg: '#E60000', kFg: '#FFFFFF', kBorder: '#E60000' },
 };
+
+// Texto de la cuenta regresiva: "en 12 min", "en 1 h 05", "Atrasado 4 min".
+export function countdownLabel(minutesLeft) {
+    if (minutesLeft === null) return 'Sin horario';
+    if (minutesLeft <= 0) return `Atrasado ${-minutesLeft} min`;
+    if (minutesLeft >= 60) return `en ${Math.floor(minutesLeft / 60)} h ${String(minutesLeft % 60).padStart(2, '0')}`;
+    return `en ${minutesLeft} min`;
+}

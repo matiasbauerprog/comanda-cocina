@@ -20,6 +20,18 @@ export function parsePedidoItems(text) {
         .filter(({ name }) => !NON_DISH_RE.test(name));
 }
 
+// Ítems para mostrar en las tarjetas ("2× Milanesa"), sin normalizar el nombre.
+export function pedidoDisplayItems(text) {
+    return (text || '')
+        .split(',')
+        .map(i => i.trim())
+        .filter(Boolean)
+        .map(item => {
+            const match = item.match(/^\((\d+)\)\s*(.+)$/);
+            return match ? { qty: parseInt(match[1], 10), name: match[2].trim() } : { qty: 1, name: item };
+        });
+}
+
 // Inversa de parsePedidoItems: [{ nombre, cantidad }] → "(2) Milanesa, Flan".
 export function formatPedidoText(items) {
     return items
