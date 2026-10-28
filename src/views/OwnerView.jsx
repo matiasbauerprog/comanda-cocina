@@ -3,16 +3,13 @@ import DailyOrders from '../components/DailyOrders';
 
 export default function OwnerView() {
     return (
-        <div className="p-3 lg:p-4 flex flex-col items-center lg:items-start lg:flex-row gap-3 lg:gap-4 w-full h-auto">
-            {/* Left Column — Form */}
-            <div className="w-full max-w-md lg:w-[380px] xl:w-[420px] shrink-0 sticky top-4 lg:self-start z-30 mx-auto lg:mx-0">
+        <div className="p-4 sm:p-6 flex flex-col lg:flex-row gap-6 items-stretch lg:items-start">
+            <div className="w-full lg:w-[400px] xl:w-[420px] lg:shrink-0 lg:sticky lg:top-[84px]">
                 <OrderForm />
             </div>
-
-            {/* Right Column — Orders */}
-            <div className="flex-1 flex flex-col lg:justify-center min-w-0 min-h-0 lg:px-8 w-full mx-auto lg:mx-0">
+            <section className="flex-1 min-w-0">
                 <DailyOrders />
-            </div>
+            </section>
         </div>
     );
 }

@@ -1,16 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Plus, Minus, Send, X, ChevronDown } from 'lucide-react';
+import { Plus, Minus, Send, X, ChevronDown, Banknote, CreditCard } from 'lucide-react';
 import ManageModal from './ManageModal';
-import CustomDropdown from './CustomDropdown';
+import ClientePicker from './order/ClientePicker';
+import PlatoPicker from './order/PlatoPicker';
+import { useToast } from './ui/Toast';
 import { useIsMobile, isMobileViewport } from '../hooks/useIsMobile';
 import { formatPedidoText } from '../lib/pedidos';
-import { getDirecciones, direccionLabel, hasDireccion, addDireccion } from '../lib/clientes';
+import { getDirecciones, addDireccion } from '../lib/clientes';
+import { addLine } from '../lib/orderForm';
+import { formatMoney } from '../lib/format';
 import DireccionesEditor from './DireccionesEditor';
 
 const METODOS_PAGO = [
-    { id: 'Efectivo' },
-    { id: 'Tarjeta' }
+    { id: 'Efectivo', label: 'Efectivo', icon: Banknote },
+    { id: 'Tarjeta', label: 'Tarjeta', icon: CreditCard },
 ];
 
 // Gestión de clientes: cada cliente tiene una lista de direcciones.
@@ -23,8 +27,8 @@ const CLIENTE_DIRECCIONES_FIELD = {
 
 function renderClienteDirecciones(cliente) {
     return getDirecciones(cliente).map((d, i) => (
-        <span key={i} className="text-xs text-gray-400 truncate block">
-            {d.etiqueta && <strong className="text-gray-500">{d.etiqueta} · </strong>}
+        <span key={i} className="text-xs text-ink-3 truncate block">
+            {d.etiqueta && <strong className="text-ink-2 font-semibold">{d.etiqueta} · </strong>}
             {d.direccion}
         </span>
     ));
@@ -34,19 +38,20 @@ function clienteSearchTexts(cliente) {
     return [cliente.nombre, ...getDirecciones(cliente).flatMap(d => [d.etiqueta, d.direccion])];
 }
 
-/* ───── Order Form ───── */
-export default function OrderForm() {
-    const { addPedido, platos, clientes, addPlato, updatePlato, deletePlato, addCliente, updateCliente, deleteCliente } = useStore();
+const fieldClass = "h-[42px] border border-line-strong rounded-[10px] px-3 text-sm text-ink bg-surface focus:outline-none focus:border-ink-3";
 
-    // Selected values
+/* ───── Nuevo pedido ───── */
+export default function OrderForm() {
+    const { addPedido, platos, clientes, masPedidos, addPlato, updatePlato, deletePlato, addCliente, updateCliente, deleteCliente } = useStore();
+    const toast = useToast();
+
     const [selectedClienteId, setSelectedClienteId] = useState('');
     const [isSavingDireccion, setIsSavingDireccion] = useState(false);
     const [direccion, setDireccion] = useState('');
-    const [selectedPlatos, setSelectedPlatos] = useState([]); // [{platoId, nombre, monto}]
+    const [lines, setLines] = useState([]); // [{ platoId, nombre, monto, cantidad }]
     const [horarioEntrega, setHorarioEntrega] = useState('');
     const [metodoPago, setMetodoPago] = useState('Efectivo');
     const [observaciones, setObservaciones] = useState('');
-    const [flash, setFlash] = useState(false);
     const [showClientesModal, setShowClientesModal] = useState(false);
     const [showPlatosModal, setShowPlatosModal] = useState(false);
     const [isSending, setIsSending] = useState(false);
@@ -55,9 +60,8 @@ export default function OrderForm() {
     const [isExpandedMobile, setIsExpandedMobile] = useState(() => !isMobileViewport());
     const isExpanded = !isMobile || isExpandedMobile;
     const clienteRef = useRef(null);
-    const timeInputRef = useRef(null);
 
-    // Shortcut for new order (F2)
+    // Atajo para un pedido nuevo (F2)
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === 'F2') {
@@ -70,67 +74,40 @@ export default function OrderForm() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const toggleExpand = () => {
-        if (isMobile) setIsExpandedMobile(!isExpandedMobile);
-    };
-
-    // When selecting a client, pre-fill their address
-    const handleClienteSelect = (id) => {
-        setSelectedClienteId(id);
-        if (id) {
-            const c = clientes.find(c => c.id === id);
-            if (c) setDireccion(getDirecciones(c)[0]?.direccion ?? '');
-        } else {
-            setDireccion('');
-        }
-    };
-
     const selectedCliente = clientes.find(c => c.id === selectedClienteId);
-    const clienteDirecciones = selectedCliente ? getDirecciones(selectedCliente) : [];
-    const canSaveDireccion = !!selectedCliente && direccion.trim() !== '' && !hasDireccion(clienteDirecciones, direccion);
+
+    // Al elegir un cliente se precarga su primera dirección
+    const handleClienteSelect = (id) => {
+        setSelectedClienteId(id || '');
+        const c = id ? clientes.find(c => c.id === id) : null;
+        setDireccion(c ? getDirecciones(c)[0]?.direccion ?? '' : '');
+        if (!id) setTimeout(() => clienteRef.current?.focus(), 0);
+    };
 
     const saveDireccion = async () => {
         setIsSavingDireccion(true);
         await updateCliente(selectedCliente.id, {
             nombre: selectedCliente.nombre,
-            direcciones: addDireccion(clienteDirecciones, direccion),
+            direcciones: addDireccion(getDirecciones(selectedCliente), direccion),
         });
         setIsSavingDireccion(false);
     };
 
-    // Dish management
-    const addDishToOrder = (platoId, qty = 1) => {
-        const p = platos.find(p => p.id === platoId);
-        if (p) {
-            setSelectedPlatos(prev => [...prev, { platoId: p.id, nombre: p.nombre, monto: p.monto, cantidad: qty }]);
-        }
-    };
+    const updateLine = (index, patch) =>
+        setLines(prev => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
 
-    const removeDishFromOrder = (index) => {
-        setSelectedPlatos(prev => prev.filter((_, i) => i !== index));
-    };
-
-    const updateDishPrice = (index, newMonto) => {
-        // Allow empty string or numeric value to facilitate typing
-        setSelectedPlatos(prev => prev.map((d, i) => i === index ? { ...d, monto: newMonto } : d));
-    };
-
-    const updateDishQuantity = (index, newCant) => {
-        setSelectedPlatos(prev => prev.map((d, i) => i === index ? { ...d, cantidad: parseInt(newCant) || 1 } : d));
-    };
-
-    const totalMonto = selectedPlatos.reduce((sum, d) => sum + (parseFloat(d.monto) || 0) * (d.cantidad || 1), 0);
+    const totalMonto = lines.reduce((sum, l) => sum + (parseFloat(l.monto) || 0) * (l.cantidad || 1), 0);
+    const canSubmit = !!selectedCliente && lines.length > 0 && !isSending;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const cliente = selectedCliente;
-        if (!cliente || selectedPlatos.length === 0 || isSending) return;
+        if (!canSubmit) return;
 
         setIsSending(true);
         const ok = await addPedido({
-            nombre: cliente.nombre,
+            nombre: selectedCliente.nombre,
             direccion: direccion.trim(),
-            pedido: formatPedidoText(selectedPlatos),
+            pedido: formatPedidoText(lines),
             horario_entrega: horarioEntrega,
             metodo_pago: metodoPago,
             observaciones,
@@ -140,267 +117,136 @@ export default function OrderForm() {
         // Si falló se conservan los datos cargados para poder reintentar
         if (!ok) return;
 
-        // Reset
+        toast(`Pedido de ${selectedCliente.nombre} enviado a cocina`);
         setSelectedClienteId('');
         setDireccion('');
-        setSelectedPlatos([]);
+        setLines([]);
         setHorarioEntrega('');
         setMetodoPago('Efectivo');
         setObservaciones('');
-        setFlash(true);
-        setTimeout(() => setFlash(false), 600);
-        clienteRef.current?.focus();
+        setTimeout(() => clienteRef.current?.focus(), 0);
     };
 
-    const inputClass = "w-full bg-white/50 border border-slate-200/60 rounded-2xl px-5 py-3.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-navy/10 focus:border-brand-navy/20 transition-all duration-300 font-sans font-medium hover:border-slate-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm shadow-slate-200/20";
-    const labelClass = "block text-[11px] font-black text-brand-navy/70 uppercase tracking-widest mb-2 font-display";
-
     return (
-        <div className="group/form relative">
-            <form
-                onSubmit={handleSubmit}
-                className={`bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/40 shadow-[0_8px_40px_rgba(0,40,85,0.06)] flex flex-col relative transition-all duration-500 ${flash ? 'ring-4 ring-brand-navy/10 border-brand-navy/20' : ''} ${isExpanded ? 'p-8 lg:p-10 gap-8' : 'p-4 gap-0'}`}
-            >
-                {/* Header */}
+        <>
+            <form onSubmit={handleSubmit} className="bg-surface border border-line rounded-[18px] flex flex-col overflow-hidden">
                 <div
-                    className={`flex items-center transition-all cursor-pointer lg:cursor-default relative ${isExpanded ? 'justify-between mb-2' : 'justify-center'} ${!isMobile ? 'lg:justify-start lg:mb-0' : ''}`}
-                    onClick={toggleExpand}
+                    className={`px-[22px] pt-5 flex items-center justify-between ${isExpanded ? '' : 'pb-5'} ${isMobile ? 'cursor-pointer' : ''}`}
+                    onClick={() => isMobile && setIsExpandedMobile(v => !v)}
                 >
-                    <h2 className="text-[32px] font-display font-black text-brand-navy tracking-tighter leading-none mb-4">
-                        Nuevo Pedido
-                    </h2>
-                    {/* Mobile Chevron */}
-                    <div className={`lg:hidden text-slate-400 ${!isExpanded ? 'absolute right-4' : ''}`}>
-                        <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`} />
-                    </div>
+                    <h2 className="font-display font-bold text-2xl tracking-[-0.025em] text-ink">Nuevo pedido</h2>
+                    {isMobile ? (
+                        <ChevronDown className={`w-5 h-5 text-ink-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    ) : (
+                        <span className="flex items-center gap-1.5 text-xs text-ink-3">
+                            Atajo
+                            <kbd className="font-mono text-[11px] px-1.5 py-0.5 border border-line-strong border-b-2 rounded-[5px] bg-soft text-ink">F2</kbd>
+                        </span>
+                    )}
                 </div>
 
                 {isExpanded && (
-                    <div className="flex flex-col gap-6">
-                        <div className="space-y-4">
-                            {/* Row 1: Cliente (select) + Dirección */}
-                            <div className="grid grid-cols-[1fr,1.2fr] gap-4 items-end">
-                                <div>
-                                    <div className="flex items-center justify-start gap-1 mb-1 flex-nowrap">
-                                        <label className={`${labelClass} !mb-0 whitespace-nowrap`}>Cliente</label>
-                                        <button type="button" onClick={(e) => { e.stopPropagation(); setShowClientesModal(true); }} className="text-[10px] font-bold text-slate-300 hover:text-slate-500 transition-colors cursor-pointer uppercase tracking-tighter whitespace-nowrap">
-                                            (AGREGAR O QUITAR)
-                                        </button>
-                                    </div>
-                                    <CustomDropdown
-                                        ref={clienteRef}
-                                        placeholder="Seleccionar clien..."
-                                        value={selectedClienteId}
-                                        onChange={handleClienteSelect}
-                                        options={clientes.map(c => ({
-                                            id: c.id,
-                                            label: c.nombre,
-                                            detail: getDirecciones(c).map(d => d.direccion).join(' · ')
-                                        }))}
-                                    />
-                                </div>
-                                <div>
-                                    <input
-                                        value={direccion}
-                                        onChange={e => setDireccion(e.target.value)}
-                                        placeholder="Dirección de entrega"
-                                        className={inputClass}
-                                    />
-                                </div>
-                            </div>
+                    <>
+                        <div className="px-[22px] py-[18px] flex flex-col gap-5">
+                            <ClientePicker
+                                ref={clienteRef}
+                                clientes={clientes}
+                                cliente={selectedCliente}
+                                onSelect={handleClienteSelect}
+                                direccion={direccion}
+                                onDireccion={setDireccion}
+                                onSaveDireccion={saveDireccion}
+                                isSavingDireccion={isSavingDireccion}
+                                onManage={() => setShowClientesModal(true)}
+                            />
 
-                            {/* Direcciones guardadas del cliente */}
-                            {(clienteDirecciones.length > 0 || canSaveDireccion) && (
-                                <div className="flex flex-wrap gap-2 -mt-1">
-                                    {clienteDirecciones.map((d, i) => {
-                                        const isActive = hasDireccion([d], direccion);
-                                        return (
-                                            <button
-                                                key={i}
-                                                type="button"
-                                                onClick={() => setDireccion(d.direccion)}
-                                                title={d.direccion}
-                                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer max-w-[14rem] truncate ${isActive
-                                                    ? 'bg-brand-navy text-white shadow-md shadow-brand-navy/20'
-                                                    : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-brand-navy'
-                                                    }`}
-                                            >
-                                                {direccionLabel(d)}
-                                            </button>
-                                        );
-                                    })}
-                                    {canSaveDireccion && (
-                                        <button
-                                            type="button"
-                                            onClick={saveDireccion}
-                                            disabled={isSavingDireccion}
-                                            className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border border-dashed border-slate-300 text-slate-500 hover:text-brand-navy hover:border-brand-navy/40 transition-all cursor-pointer disabled:opacity-50"
-                                        >
-                                            <Plus className="w-3 h-3" />
-                                            {isSavingDireccion ? 'Guardando...' : 'Guardar en el cliente'}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
+                            <div className="flex flex-col gap-2">
+                                <PlatoPicker
+                                    platos={platos}
+                                    lines={lines}
+                                    masPedidos={masPedidos}
+                                    onAdd={plato => setLines(prev => addLine(prev, plato))}
+                                    onManage={() => setShowPlatosModal(true)}
+                                />
 
-                            {/* Row 2: Pedido */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-start gap-1 mb-1 flex-nowrap">
-                                    <label className={`${labelClass} !mb-0 whitespace-nowrap`}>Pedido</label>
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); setShowPlatosModal(true); }} className="text-[10px] font-bold text-slate-300 hover:text-slate-500 transition-colors cursor-pointer uppercase tracking-tighter whitespace-nowrap">
-                                        (AGREGAR O QUITAR)
-                                    </button>
-                                </div>
-
-                                {selectedPlatos.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mb-3">
-                                        {selectedPlatos.map((d, i) => (
-                                            <div key={i} className="inline-flex items-center gap-3 bg-white border border-slate-200 rounded-full pl-2 pr-4 py-1.5 shadow-sm transition-all hover:border-slate-300 group/chip">
-                                                {/* Quantity Control */}
-                                                <div className="flex items-center gap-1 bg-slate-100 rounded-full px-1 py-0.5">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => updateDishQuantity(i, Math.max(1, (d.cantidad || 1) - 1))}
-                                                        className="w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-white transition-colors cursor-pointer"
-                                                    >
-                                                        <Minus className="w-3 h-3" />
+                                {lines.length > 0 && (
+                                    <div className="mt-1 border border-line-soft rounded-xl bg-soft">
+                                        {lines.map((l, i) => (
+                                            <div key={l.platoId} className="flex items-center gap-2.5 px-2.5 py-2 border-b border-line-soft last:border-b-0">
+                                                <div className="flex items-center bg-surface border border-line rounded-lg h-7 shrink-0">
+                                                    <button type="button" onClick={() => updateLine(i, { cantidad: Math.max(1, l.cantidad - 1) })} className="w-[26px] h-[26px] flex items-center justify-center text-ink-2 cursor-pointer" title="Uno menos">
+                                                        <Minus className="w-[13px] h-[13px]" />
                                                     </button>
-                                                    <span className="text-[11px] font-black text-slate-700 w-5 text-center">{d.cantidad || 1}</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => updateDishQuantity(i, (d.cantidad || 1) + 1)}
-                                                        className="w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-white transition-colors cursor-pointer"
-                                                    >
-                                                        <Plus className="w-3 h-3" />
+                                                    <span className="font-mono text-[13px] font-semibold min-w-4 text-center">{l.cantidad}</span>
+                                                    <button type="button" onClick={() => updateLine(i, { cantidad: l.cantidad + 1 })} className="w-[26px] h-[26px] flex items-center justify-center text-ink-2 cursor-pointer" title="Uno más">
+                                                        <Plus className="w-[13px] h-[13px]" />
                                                     </button>
                                                 </div>
-
-                                                <span className="text-[12px] font-bold text-slate-700 tracking-tight">{d.nombre}</span>
-
-                                                <div className="flex items-center gap-1.5 border-l border-slate-100 pl-3 bg-slate-50/50 rounded-r-full -mr-4 pr-4 py-1.5 group-hover/chip:bg-brand-navy/[0.03] transition-colors">
-                                                    <span className="text-[10px] text-brand-navy/30 font-black">$</span>
+                                                <span className="flex-1 min-w-0 text-[13px] font-medium truncate">{l.nombre}</span>
+                                                <span className="flex items-center gap-0.5 font-mono text-[13px] text-ink-3">
+                                                    $
                                                     <input
                                                         type="number"
-                                                        value={d.monto}
-                                                        onChange={e => updateDishPrice(i, e.target.value)}
-                                                        className="w-16 bg-transparent text-[13px] font-black text-brand-navy focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder-slate-300"
-                                                        min="0"
-                                                        step="any"
-                                                        placeholder="0"
+                                                        value={l.monto}
+                                                        onChange={e => updateLine(i, { monto: e.target.value })}
+                                                        className="w-[62px] bg-transparent font-mono text-[13px] font-medium text-ink text-right focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                     />
-                                                </div>
-                                                <button type="button" onClick={() => removeDishFromOrder(i)} className="p-1 text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-full transition-colors cursor-pointer ml-1">
-                                                    <X className="w-3.5 h-3.5" />
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setLines(prev => prev.filter((_, j) => j !== i))}
+                                                    className="w-6 h-6 rounded-md flex items-center justify-center text-ink-4 hover:bg-danger-bg hover:text-danger cursor-pointer"
+                                                    title="Quitar"
+                                                >
+                                                    <X className="w-[13px] h-[13px]" />
                                                 </button>
                                             </div>
                                         ))}
                                     </div>
                                 )}
-
-                                <CustomDropdown
-                                    placeholder="Seleccionar platos..."
-                                    value=""
-                                    onChange={(id, qty) => {
-                                        const inOrder = selectedPlatos.find(sp => sp.platoId === id);
-                                        if (inOrder) {
-                                            const idx = selectedPlatos.indexOf(inOrder);
-                                            updateDishQuantity(idx, (inOrder.cantidad || 0) + qty);
-                                        } else {
-                                            addDishToOrder(id, qty);
-                                        }
-                                    }}
-                                    iconMinus={Minus}
-                                    iconPlus={Plus}
-                                    options={platos.map(p => {
-                                        const inOrder = selectedPlatos.find(sp => sp.platoId === p.id);
-                                        const qty = inOrder ? (inOrder.cantidad || 1) : 0;
-                                        return {
-                                            id: p.id,
-                                            label: p.nombre,
-                                            detail: `$${Number(p.monto).toLocaleString('es-AR')}`,
-                                            quantity: qty,
-                                        };
-                                    })}
-                                />
                             </div>
 
-                            {/* Row 3: Pago + Total */}
-                            <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 pt-2">
-                                <div className="flex flex-col items-center w-full sm:w-auto">
-                                    <label className={`${labelClass} text-center w-full mb-3`}>MÉTODO DE PAGO</label>
-                                    <div className="flex bg-slate-50/50 p-1 rounded-full border border-slate-100 min-w-[200px]">
-                                        {METODOS_PAGO.map(m => (
-                                            <button
-                                                key={m.id}
-                                                type="button"
-                                                onClick={() => setMetodoPago(m.id)}
-                                                className={`flex-1 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 cursor-pointer flex items-center justify-center ${metodoPago === m.id
-                                                    ? (m.id === 'Tarjeta' ? 'bg-brand-navy text-white shadow-lg shadow-brand-navy/30' : 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30')
-                                                    : 'text-slate-400 hover:text-brand-navy hover:bg-white'
-                                                    }`}
-                                            >
-                                                {m.id}
-                                            </button>
-                                        ))}
-                                    </div>
+                            <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-2.5">
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-xs font-semibold text-ink-2">Pago</span>
+                                    <PaymentToggle value={metodoPago} onChange={setMetodoPago} />
                                 </div>
-
-                                <div className="flex flex-col items-center sm:items-end pr-4">
-                                    <label className={`${labelClass} text-center sm:text-right mb-3`}>TOTAL</label>
-                                    <div className={`text-[40px] font-display font-black tracking-tighter leading-none h-12 flex items-center ${metodoPago === 'Tarjeta' ? 'text-brand-navy' : 'text-emerald-600'}`}>
-                                        ${totalMonto.toLocaleString('es-AR')}
-                                    </div>
-                                </div>
+                                <label className="flex flex-col gap-2">
+                                    <span className="text-xs font-semibold text-ink-2">Entrega</span>
+                                    <input type="time" value={horarioEntrega} onChange={e => setHorarioEntrega(e.target.value)} className={`${fieldClass} font-mono`} />
+                                </label>
                             </div>
+                            <input
+                                value={observaciones}
+                                onChange={e => setObservaciones(e.target.value)}
+                                placeholder="Observaciones para cocina (opcional)"
+                                className={fieldClass}
+                            />
                         </div>
 
-                        <div className="space-y-8">
-                            <div className="flex gap-4 items-center">
-                                <div className="flex-1">
-                                    <input
-                                        value={observaciones}
-                                        onChange={e => setObservaciones(e.target.value)}
-                                        placeholder="Observaciones"
-                                        className="w-full bg-transparent border-b border-slate-200 py-3 text-sm text-slate-900 placeholder-slate-900 focus:outline-none focus:border-[#55b685] transition-all font-sans font-medium"
-                                    />
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <div
-                                        onClick={() => timeInputRef.current?.showPicker()}
-                                        className="flex items-center justify-center bg-white/50 rounded-2xl px-4 h-12 border border-slate-200/60 hover:border-brand-navy/20 hover:bg-white transition-all cursor-pointer group/time min-w-[100px] shadow-sm shadow-slate-200/20"
-                                    >
-                                        <span className={`font-black text-[10px] uppercase tracking-widest ${horarioEntrega ? 'text-brand-navy' : 'text-slate-500'}`}>
-                                            {horarioEntrega || "HORA"}
-                                        </span>
-                                        <input
-                                            ref={timeInputRef}
-                                            type="time"
-                                            value={horarioEntrega}
-                                            onChange={e => setHorarioEntrega(e.target.value)}
-                                            className="w-0 h-0 opacity-0 absolute"
-                                        />
-                                    </div>
-                                </div>
+                        <div className="px-[22px] pt-4 pb-5 border-t border-line-soft bg-soft flex flex-col gap-3.5">
+                            <div className="flex justify-between items-baseline">
+                                <span className="text-[13px] text-ink-2">
+                                    Total · <span className={`font-semibold ${metodoPago === 'Efectivo' ? 'text-cash' : 'text-card'}`}>{metodoPago}</span>
+                                </span>
+                                <span className="font-display font-bold text-[34px] tracking-[-0.03em] leading-none text-ink tabular-nums">{formatMoney(totalMonto)}</span>
                             </div>
-
-                            <div className="flex justify-center pt-2">
-                                <button
-                                    type="submit"
-                                    disabled={!selectedClienteId || selectedPlatos.length === 0 || isSending}
-                                    className="w-full max-w-sm h-14 bg-gradient-to-r from-brand-red to-[#ff4d4d] hover:from-[#e60000] hover:to-[#ff3333] text-white font-display font-black text-sm tracking-[0.2em] rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] cursor-pointer shadow-xl shadow-brand-red/30 disabled:opacity-30 disabled:grayscale disabled:shadow-none duration-300 uppercase"
-                                >
-                                    <Send className="w-5 h-5" />
-                                    {isSending ? 'ENVIANDO...' : 'DESPACHAR'}
-                                </button>
-                            </div>
+                            <button
+                                type="submit"
+                                disabled={!canSubmit}
+                                className="h-[52px] rounded-xl text-[15px] font-semibold flex items-center justify-center gap-2.5 transition-colors bg-brand-red text-white hover:bg-[#C80000] cursor-pointer disabled:bg-line disabled:text-ink-4 disabled:cursor-not-allowed"
+                            >
+                                <Send className="w-[17px] h-[17px]" />
+                                {isSending ? 'Enviando…' : 'Enviar a cocina'}
+                            </button>
                         </div>
-                    </div>
+                    </>
                 )}
             </form>
 
             {showClientesModal && (
                 <ManageModal
-                    title="Gestionar Clientes"
+                    title="Clientes"
                     items={clientes}
                     onAdd={addCliente}
                     onDelete={deleteCliente}
@@ -417,7 +263,7 @@ export default function OrderForm() {
 
             {showPlatosModal && (
                 <ManageModal
-                    title="Gestionar Platos"
+                    title="Carta"
                     items={platos}
                     onAdd={(data) => addPlato({ nombre: data.nombre, monto: data.monto })}
                     onDelete={deletePlato}
@@ -429,6 +275,29 @@ export default function OrderForm() {
                     ]}
                 />
             )}
+        </>
+    );
+}
+
+// Efectivo / Tarjeta: el activo se pinta del color del método (verde o azul).
+function PaymentToggle({ value, onChange }) {
+    return (
+        <div className="flex bg-paper p-[3px] rounded-[10px] h-[42px]">
+            {METODOS_PAGO.map(({ id, label, icon: Icon }) => {
+                const isActive = value === id;
+                const activeClass = id === 'Efectivo' ? 'bg-[#0E7A4B]' : 'bg-brand-navy';
+                return (
+                    <button
+                        key={id}
+                        type="button"
+                        onClick={() => onChange(id)}
+                        className={`flex-1 rounded-lg text-[13px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${isActive ? `${activeClass} text-white shadow-[0_1px_3px_rgba(11,27,46,0.2)]` : 'text-ink-2 hover:text-ink'}`}
+                    >
+                        <Icon className="w-[15px] h-[15px] hidden min-[400px]:block" />
+                        {label}
+                    </button>
+                );
+            })}
         </div>
     );
 }
