@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { filterOrdersByDateRange } from '../lib/dates';
 import { sortByDeliveryTime } from '../lib/pedidos';
+import { toClienteRow } from '../lib/clientes';
 import { StoreContext } from './useStore';
 import { computeKPIs, computeAnalyticsKPIs } from './kpis';
 
@@ -128,11 +129,23 @@ export function StoreProvider({ children, active = false }) {
 
     // === Clientes CRUD ===
     const addCliente = useCallback((data) =>
-        runMutation('agregar cliente', supabase.from('clientes').insert([{ nombre: data.nombre, direccion: data.direccion || '' }])), []);
-    const updateCliente = useCallback((id, updates) =>
-        runMutation('actualizar cliente', supabase.from('clientes').update(updates).eq('id', id)), []);
+        runMutation('agregar cliente', supabase.from('clientes').insert([toClienteRow(data)])), []);
+    const updateCliente = useCallback((id, data) =>
+        runMutation('actualizar cliente', supabase.from('clientes').update(toClienteRow(data)).eq('id', id)), []);
     const deleteCliente = useCallback((id) =>
         runMutation('eliminar cliente', supabase.from('clientes').delete().eq('id', id)), []);
+    // Une varios clientes en uno (ver supabase/clientes-direcciones.sql). Es una sola
+    // transacción en la base; realtime trae los cambios de clientes y pedidos.
+    const unirClientes = useCallback(({ keepId, deleteIds, nombre, direcciones, nombresViejos }) => {
+        const row = toClienteRow({ nombre, direcciones });
+        return runMutation('unir clientes', supabase.rpc('unir_clientes', {
+            p_keep_id: String(keepId),
+            p_nombre: row.nombre,
+            p_direcciones: row.direcciones,
+            p_delete_ids: deleteIds.map(String),
+            p_nombres_viejos: nombresViejos,
+        }));
+    }, []);
 
     // === Pedidos CRUD ===
     const addPedido = useCallback((data) =>
@@ -218,7 +231,7 @@ export function StoreProvider({ children, active = false }) {
         setAnalyticsFilter,
 
         platos, addPlato, updatePlato, deletePlato,
-        clientes, addCliente, updateCliente, deleteCliente,
+        clientes, addCliente, updateCliente, deleteCliente, unirClientes,
     };
 
     return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
