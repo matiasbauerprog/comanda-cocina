@@ -3,8 +3,8 @@ import { Lock, Loader2, Download, ChefHat, LayoutDashboard } from 'lucide-react'
 import { signIn } from '../lib/auth';
 
 const ROLE_OPTIONS = [
-    { id: 'owner', label: 'Dueño', icon: LayoutDashboard },
-    { id: 'kitchen', label: 'Cocina', icon: ChefHat },
+    { id: 'owner', label: 'Gaspi', icon: LayoutDashboard },
+    { id: 'kitchen', label: 'Comanda', icon: ChefHat },
 ];
 
 export default function LoginView() {
