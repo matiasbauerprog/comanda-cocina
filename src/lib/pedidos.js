@@ -1,4 +1,5 @@
 import { getDeliveryDate } from './dates.js';
+import { normalizeSearch } from './clientes.js';
 
 // Tokens que se cargan como plato pero no lo son (ej. "Envio 1").
 const NON_DISH_RE = /^envio\s*\d*$/i;
@@ -37,6 +38,16 @@ export function rankDishes(pedidos) {
     return Object.entries(counts)
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count);
+}
+
+// Platos de la carta más pedidos, para el acceso rápido del formulario. Los nombres
+// de pedidos viejos que ya no están en la carta se descartan.
+export function topPlatos(pedidos, platos, n = 6) {
+    const carta = new Map(platos.map(p => [normalizeSearch(p.nombre), p]));
+    return rankDishes(pedidos)
+        .map(({ name }) => carta.get(normalizeSearch(name)))
+        .filter(Boolean)
+        .slice(0, n);
 }
 
 // Pedidos con horario de entrega primero (el más próximo arriba), después el resto.

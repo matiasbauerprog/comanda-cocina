@@ -50,8 +50,16 @@ export function computeAnalyticsKPIs(pedidosRango, pedidosTodos) {
 
     const clientes = Object.values(clientesMap);
 
+    const efectivo = completados.filter(p => p.metodo_pago === 'Efectivo').reduce((sum, p) => sum + p.monto, 0);
+    const distribucionPago = {
+        efectivo,
+        tarjeta: totalVendido - efectivo,
+        pctEfectivo: totalVendido > 0 ? Math.round((efectivo / totalVendido) * 100) : 0,
+    };
+
     return {
         totalVendido,
+        distribucionPago,
         ticketPromedio,
         topPlatos,
         ventasPorHora,

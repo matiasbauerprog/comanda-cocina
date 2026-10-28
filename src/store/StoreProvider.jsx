@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { filterOrdersByDateRange, filterNeedsHistory, getDateRange } from '../lib/dates';
-import { sortByDeliveryTime } from '../lib/pedidos';
+import { sortByDeliveryTime, topPlatos } from '../lib/pedidos';
 import { toClienteRow } from '../lib/clientes';
 import { StoreContext } from './useStore';
 import { computeKPIs, computeAnalyticsKPIs } from './kpis';
@@ -19,10 +19,10 @@ function parsePedidoRecord(row) {
 }
 
 // Trae todas las filas de una tabla (o las que pasen `applyFilter`), página por página.
-async function fetchAll(table, orderColumn, applyFilter = (query) => query) {
+async function fetchAll(table, orderColumn, applyFilter = (query) => query, columns = '*') {
     const rows = [];
     for (let from = 0; ; from += PAGE_SIZE) {
-        const { data, error } = await applyFilter(supabase.from(table).select('*'))
+        const { data, error } = await applyFilter(supabase.from(table).select(columns))
             .order(orderColumn, { ascending: false })
             .order('id', { ascending: true })
             .range(from, from + PAGE_SIZE - 1);
@@ -37,6 +37,13 @@ async function fetchAll(table, orderColumn, applyFilter = (query) => query) {
 function recentPedidos(query) {
     const since = getDateRange('dia').since.toISOString();
     return query.or(`estado.neq.listo,timestamp_creacion.gte."${since}"`);
+}
+
+// Para los botones de "más pedidos": solo el texto de los pedidos despachados del último mes.
+const MAS_PEDIDOS_DIAS = 30;
+function fetchPedidosRecientes() {
+    const since = new Date(Date.now() - MAS_PEDIDOS_DIAS * 24 * 60 * 60 * 1000).toISOString();
+    return fetchAll('pedidos', 'timestamp_creacion', q => q.eq('estado', 'listo').gte('timestamp_creacion', since), 'id, pedido, timestamp_creacion');
 }
 
 function applyChange(setter, payload, parse = (r) => r) {
@@ -68,6 +75,7 @@ export function StoreProvider({ children, active = false }) {
     const [pedidos, setPedidos] = useState([]);
     const [platos, setPlatos] = useState([]);
     const [clientes, setClientes] = useState([]);
+    const [pedidosRecientes, setPedidosRecientes] = useState([]);
     const [reloadKey, setReloadKey] = useState(0);
     // 'idle' | 'loading' | 'loaded'. historyWantedRef sigue pidiendo el historial
     // completo si el realtime se reconecta; sessionRef descarta respuestas de una
@@ -101,6 +109,10 @@ export function StoreProvider({ children, active = false }) {
         };
 
         fetchData();
+        // No bloquea la carga: si falla, simplemente no se muestran los más pedidos
+        fetchPedidosRecientes()
+            .then(rows => { if (!cancelled) setPedidosRecientes(rows); })
+            .catch(err => console.error('Error cargando los más pedidos:', err));
 
         // Si el realtime se reconecta, se pierden los cambios ocurridos mientras estuvo
         // caído, así que se vuelven a traer los datos.
@@ -125,6 +137,7 @@ export function StoreProvider({ children, active = false }) {
             setPedidos([]);
             setPlatos([]);
             setClientes([]);
+            setPedidosRecientes([]);
         };
     }, [active, reloadKey]);
 
@@ -204,6 +217,8 @@ export function StoreProvider({ children, active = false }) {
             timestamp_finalizacion: new Date().toISOString()
         }).eq('id', id)), []);
 
+    const masPedidos = useMemo(() => topPlatos(pedidosRecientes, platos), [pedidosRecientes, platos]);
+
     // Pedidos sin despachar, de cualquier día, ordenados por horario de entrega.
     const pedidosActivos = useMemo(() => sortByDeliveryTime(pedidos.filter(p => p.estado !== 'listo')), [pedidos]);
 
@@ -267,7 +282,7 @@ export function StoreProvider({ children, active = false }) {
         analyticsFilter,
         setAnalyticsFilter,
 
-        platos, addPlato, updatePlato, deletePlato,
+        platos, addPlato, updatePlato, deletePlato, masPedidos,
         clientes, addCliente, updateCliente, deleteCliente, unirClientes,
     };
 

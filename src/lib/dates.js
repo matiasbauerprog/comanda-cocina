@@ -76,6 +76,16 @@ export function filterNeedsHistory(filter, now = new Date()) {
     return !(isISODate(filter) && filter === toLocalISODate(now));
 }
 
+// Título de la pestaña de historial del Gestor.
+export function historyTitle(filter, now = new Date()) {
+    if (filter === 'semana') return 'Cerrados esta semana';
+    if (filter === 'mes') return 'Cerrados este mes';
+    const label = formatFilterLabel(filter, now);
+    if (label === 'HOY') return 'Cerrados hoy';
+    if (label === 'AYER') return 'Cerrados ayer';
+    return `Cerrados ${label}`;
+}
+
 // Fecha que muestra el calendario como seleccionada para un filtro.
 export function filterToCalendarDate(filter) {
     return isISODate(filter) ? filter : toLocalISODate();
