@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import { parseLocalISODate, toLocalISODate } from '../lib/dates';
 
-export default function CalendarPicker({ selectedDate, onSelect, onClose }) {
-    // Parse selectedDate carefully to avoid UTC shift
-    const initialDate = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
+export default function CalendarPicker({ selectedDate, onSelect }) {
+    const initialDate = selectedDate ? parseLocalISODate(selectedDate) : new Date();
     const [currentMonth, setCurrentMonth] = useState(initialDate);
 
     const daysOfWeek = ['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'];
@@ -47,17 +47,7 @@ export default function CalendarPicker({ selectedDate, onSelect, onClose }) {
         setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1));
     };
 
-    const isSelected = (date) => {
-        if (!selectedDate) return false;
-        const s = new Date(selectedDate + 'T00:00:00');
-        return date.getFullYear() === s.getFullYear() &&
-            date.getMonth() === s.getMonth() &&
-            date.getDate() === s.getDate();
-    };
-
-    const isToday = (date) => {
-        return date.toDateString() === new Date().toDateString();
-    };
+    const isSelected = (date) => selectedDate === toLocalISODate(date);
 
     return (
         <div className="bg-[#E9EDE0] rounded-3xl p-6 w-[320px] shadow-xl animate-card-in select-none border border-[#dee2d5]">
@@ -90,11 +80,7 @@ export default function CalendarPicker({ selectedDate, onSelect, onClose }) {
                     return (
                         <div key={idx} className="flex justify-center items-center h-10">
                             <button
-                                onClick={() => {
-                                    const dateStr = item.date.toISOString().split('T')[0];
-                                    onSelect(dateStr);
-                                    if (onClose) onClose();
-                                }}
+                                onClick={() => onSelect(toLocalISODate(item.date))}
                                 className={`
                                     w-10 h-10 rounded-full text-sm transition-all duration-300
                                     ${item.current ? 'text-slate-800 font-medium' : 'text-slate-400'}

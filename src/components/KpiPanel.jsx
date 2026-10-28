@@ -1,98 +1,43 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store/useStore';
-import { DollarSign, ShoppingBag, Banknote, CreditCard, X, Trophy, Calendar, ChevronDown } from 'lucide-react';
-import CalendarPicker from './CalendarPicker';
+import { DollarSign, ShoppingBag, X, Trophy, Calendar, ChevronDown } from 'lucide-react';
+import CalendarPopover from './CalendarPopover';
+import { filterToCalendarDate, formatFilterLabel } from '../lib/dates';
+
+// Arma el renderTrigger del botón chico con la etiqueta del filtro, al lado de cada KPI.
+function chipTrigger(label) {
+    return ({ ref, onClick }) => (
+        <button
+            ref={ref}
+            type="button"
+            onClick={onClick}
+            className="relative px-2 h-full flex items-center justify-center rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+        >
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group-hover:text-brand-navy transition-colors">
+                {label}
+                <Calendar className="w-3 h-3 opacity-40 group-hover:opacity-100" />
+            </span>
+        </button>
+    );
+}
 
 export default function HeaderKpis() {
     const {
         salesKPIs, salesOrders, salesFilter, setSalesFilter,
-        rankingKPIs, rankingOrders, rankingFilter, setRankingFilter
+        rankingKPIs, rankingFilter, setRankingFilter
     } = useStore();
-
-    const [activeCalendar, setActiveCalendar] = useState(null); // 'ventas' | 'ranking' | null
-    const [activeModalCalendar, setActiveModalCalendar] = useState(false);
-    const salesBtnRef = useRef(null);
-    const rankingBtnRef = useRef(null);
-    const modalCalendarBtnRef = useRef(null);
-
-    // Close calendar on click outside
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (activeCalendar && !e.target.closest('.calendar-popover') && !e.target.closest('.calendar-trigger')) {
-                setActiveCalendar(null);
-            }
-            if (activeModalCalendar && !e.target.closest('.modal-calendar-popover') && !e.target.closest('.modal-calendar-trigger')) {
-                setActiveModalCalendar(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [activeCalendar, activeModalCalendar]);
-
-    // Sales Data
-    const { totalVendido, distribucionPago } = salesKPIs;
-    const efectivo = distribucionPago?.Efectivo || 0;
-    const tarjeta = distribucionPago?.Tarjeta || 0;
-
-    // Ranking Data
-    const { pedidosCompletados } = rankingKPIs;
 
     const [modal, setModal] = useState(null); // 'ventas' | 'ranking' | null
 
-    // Helper: Get data for current modal
-    const currentOrders = modal === 'ventas' ? salesOrders : rankingOrders;
+    const { totalVendido, distribucionPago } = salesKPIs;
+    const efectivo = distribucionPago.Efectivo || 0;
+    const tarjeta = distribucionPago.Tarjeta || 0;
+    const { pedidosCompletados, ranking } = rankingKPIs;
+
     const currentFilter = modal === 'ventas' ? salesFilter : rankingFilter;
     const setCurrentFilter = modal === 'ventas' ? setSalesFilter : setRankingFilter;
-
-    const completedOrders = currentOrders.filter(p => p.estado === 'listo');
-
-    // Build dish ranking from completed orders (if ranking modal)
-    const dishCounts = {};
-    if (modal === 'ranking') {
-        completedOrders.forEach(p => {
-            const items = (p.pedido || '').split(',').map(i => i.trim()).filter(Boolean);
-            items.forEach(item => {
-                // Handle quantity prefix like "(2) ensalada" → count 2
-                const qtyMatch = item.match(/^\((\d+)\)\s*(.+)/);
-                let qty = 1;
-                let name = item;
-                if (qtyMatch) {
-                    qty = parseInt(qtyMatch[1], 10);
-                    name = qtyMatch[2].trim();
-                }
-                // Skip non-dish tokens like "envio 1", "envio 2", etc.
-                if (/^envio\s*\d*$/i.test(name)) return;
-                const key = name.toLowerCase();
-                dishCounts[key] = (dishCounts[key] || 0) + qty;
-            });
-        });
-    }
-    const ranking = Object.entries(dishCounts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count);
-
-    const formatFilterLabel = (filter) => {
-        if (filter === 'dia') return 'HOY';
-        if (filter === 'semana') return 'SEM';
-        if (filter === 'mes') return 'MES';
-
-        // Handle YYYY-MM-DD
-        if (/^\d{4}-\d{2}-\d{2}$/.test(filter)) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const selected = new Date(filter + 'T00:00:00');
-            const diffDays = Math.round((today - selected) / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 0) return 'HOY';
-            if (diffDays === 1) return 'AYER';
-
-            const [y, m, d] = filter.split('-');
-            return `${d}/${m}`;
-        }
-        return filter.toUpperCase();
-    };
+    const completedSales = salesOrders.filter(p => p.estado === 'listo');
 
     return (
         <>
@@ -114,37 +59,11 @@ export default function HeaderKpis() {
 
                     <div className="w-px h-5 bg-slate-100 mx-1" />
 
-                    <div
-                        ref={salesBtnRef}
-                        onClick={() => setActiveCalendar(activeCalendar === 'ventas' ? null : 'ventas')}
-                        className="relative px-2 h-full flex items-center justify-center rounded-lg hover:bg-slate-50 transition-colors cursor-pointer calendar-trigger"
-                    >
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group-hover:text-primary-blue transition-colors">
-                            {formatFilterLabel(salesFilter)}
-                            <Calendar className="w-3 h-3 opacity-40 group-hover:opacity-100" />
-                        </span>
-                    </div>
-
-                    {/* Sales Calendar Popover using Portal */}
-                    {activeCalendar === 'ventas' && salesBtnRef.current && createPortal(
-                        <div
-                            className="fixed z-[120] calendar-popover"
-                            style={{
-                                top: salesBtnRef.current.getBoundingClientRect().bottom + 8,
-                                left: Math.max(10, Math.min(
-                                    window.innerWidth - 330,
-                                    salesBtnRef.current.getBoundingClientRect().left + (salesBtnRef.current.offsetWidth / 2) - 160
-                                ))
-                            }}
-                        >
-                            <CalendarPicker
-                                selectedDate={salesFilter === 'dia' ? new Date().toISOString().split('T')[0] : salesFilter}
-                                onSelect={(date) => { setSalesFilter(date); setActiveCalendar(null); }}
-                                onClose={() => setActiveCalendar(null)}
-                            />
-                        </div>,
-                        document.body
-                    )}
+                    <CalendarPopover
+                        selectedDate={filterToCalendarDate(salesFilter)}
+                        onSelect={setSalesFilter}
+                        renderTrigger={chipTrigger(formatFilterLabel(salesFilter))}
+                    />
                 </div>
 
                 {/* Pedidos Despachados Chip */}
@@ -163,37 +82,11 @@ export default function HeaderKpis() {
 
                     <div className="w-px h-5 bg-slate-100 mx-1" />
 
-                    <div
-                        ref={rankingBtnRef}
-                        onClick={() => setActiveCalendar(activeCalendar === 'ranking' ? null : 'ranking')}
-                        className="relative px-2 h-full flex items-center justify-center rounded-lg hover:bg-slate-50 transition-colors cursor-pointer calendar-trigger"
-                    >
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group-hover:text-primary-blue transition-colors">
-                            {formatFilterLabel(rankingFilter)}
-                            <Calendar className="w-3 h-3 opacity-40 group-hover:opacity-100" />
-                        </span>
-                    </div>
-
-                    {/* Ranking Calendar Popover using Portal */}
-                    {activeCalendar === 'ranking' && rankingBtnRef.current && createPortal(
-                        <div
-                            className="fixed z-[120] calendar-popover"
-                            style={{
-                                top: rankingBtnRef.current.getBoundingClientRect().bottom + 8,
-                                left: Math.max(10, Math.min(
-                                    window.innerWidth - 330,
-                                    rankingBtnRef.current.getBoundingClientRect().left + (rankingBtnRef.current.offsetWidth / 2) - 160
-                                ))
-                            }}
-                        >
-                            <CalendarPicker
-                                selectedDate={rankingFilter === 'dia' ? new Date().toISOString().split('T')[0] : rankingFilter}
-                                onSelect={(date) => { setRankingFilter(date); setActiveCalendar(null); }}
-                                onClose={() => setActiveCalendar(null)}
-                            />
-                        </div>,
-                        document.body
-                    )}
+                    <CalendarPopover
+                        selectedDate={filterToCalendarDate(rankingFilter)}
+                        onSelect={setRankingFilter}
+                        renderTrigger={chipTrigger(formatFilterLabel(rankingFilter))}
+                    />
                 </div>
             </div>
 
@@ -210,34 +103,20 @@ export default function HeaderKpis() {
                                 )}
                             </h2>
                             <div className="flex items-center gap-3">
-                                <button
-                                    ref={modalCalendarBtnRef}
-                                    onClick={() => setActiveModalCalendar(!activeModalCalendar)}
-                                    className="appearance-none bg-white ring-1 ring-slate-200 text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-xl px-4 py-2 outline-none focus:ring-slate-900/10 cursor-pointer hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2 modal-calendar-trigger group"
-                                >
-                                    {formatFilterLabel(currentFilter)}
-                                    <ChevronDown className={`w-3.5 h-3.5 text-slate-300 group-hover:text-primary-blue transition-transform ${activeModalCalendar ? 'rotate-180' : ''}`} />
-                                </button>
-
-                                {activeModalCalendar && modalCalendarBtnRef.current && createPortal(
-                                    <div
-                                        className="fixed z-[120] modal-calendar-popover scale-95 origin-top"
-                                        style={{
-                                            top: modalCalendarBtnRef.current.getBoundingClientRect().bottom + 8,
-                                            left: Math.max(10, Math.min(
-                                                window.innerWidth - 330,
-                                                modalCalendarBtnRef.current.getBoundingClientRect().left + (modalCalendarBtnRef.current.offsetWidth / 2) - 160
-                                            ))
-                                        }}
-                                    >
-                                        <CalendarPicker
-                                            selectedDate={currentFilter === 'dia' ? new Date().toISOString().split('T')[0] : currentFilter}
-                                            onSelect={(date) => { setCurrentFilter(date); setActiveModalCalendar(false); }}
-                                            onClose={() => setActiveModalCalendar(false)}
-                                        />
-                                    </div>,
-                                    document.body
-                                )}
+                                <CalendarPopover
+                                    selectedDate={filterToCalendarDate(currentFilter)}
+                                    onSelect={setCurrentFilter}
+                                    renderTrigger={({ ref, onClick, isOpen }) => (
+                                        <button
+                                            ref={ref}
+                                            onClick={onClick}
+                                            className="appearance-none bg-white ring-1 ring-slate-200 text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-xl px-4 py-2 outline-none focus:ring-slate-900/10 cursor-pointer hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2 group"
+                                        >
+                                            {formatFilterLabel(currentFilter)}
+                                            <ChevronDown className={`w-3.5 h-3.5 text-slate-300 group-hover:text-brand-navy transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+                                    )}
+                                />
                                 <button onClick={() => setModal(null)} className="p-2 rounded-xl hover:bg-slate-200 text-slate-400 hover:text-slate-900 transition-all cursor-pointer">
                                     <X className="w-6 h-6" />
                                 </button>
@@ -248,7 +127,7 @@ export default function HeaderKpis() {
                         <div className="overflow-y-auto p-4 rounded-b-[2.5rem]">
                             {modal === 'ventas' ? (
                                 /* Sales Detail */
-                                completedOrders.length === 0 ? (
+                                completedSales.length === 0 ? (
                                     <p className="text-gray-400 text-sm text-center py-8 italic">No hay ventas registradas</p>
                                 ) : (
                                     <div className="space-y-6">
@@ -263,7 +142,7 @@ export default function HeaderKpis() {
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
-                                                    {completedOrders.map((p, i) => (
+                                                    {completedSales.map(p => (
                                                         <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                                                             <td className="py-2 px-3 font-semibold text-slate-800 align-middle">
                                                                 {p.cliente.nombre}

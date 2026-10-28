@@ -3,11 +3,10 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function CustomerLoyalty({ kpis }) {
-    if (!kpis) return null;
+    const [selectedSegment, setSelectedSegment] = useState(null); // { title, data, color, bg }
 
     const { nuevos, fieles, total } = kpis.segmentacion;
     const totalSegmented = (nuevos.length + fieles.length) || 1;
-    const [selectedSegment, setSelectedSegment] = useState(null); // { title: string, data: array }
 
     return (
         <div className="flex flex-col gap-8">
@@ -20,11 +19,11 @@ export default function CustomerLoyalty({ kpis }) {
 
                 <div className="grid grid-cols-2 gap-2 lg:gap-3 mb-4">
                     <div
-                        onClick={() => nuevos.length > 0 && setSelectedSegment({ title: 'Nuevos Clientes (Último mes)', data: nuevos, color: 'text-primary-blue', bg: 'bg-blue-50/50' })}
+                        onClick={() => nuevos.length > 0 && setSelectedSegment({ title: 'Nuevos Clientes (1 pedido)', data: nuevos, color: 'text-brand-navy', bg: 'bg-blue-50/50' })}
                         className={`p-3 lg:p-4 rounded-2xl border border-blue-100 flex flex-col items-center justify-center text-center shadow-sm transition-all duration-300 ${nuevos.length > 0 ? 'bg-blue-50/50 hover:bg-blue-100/50 cursor-pointer active:scale-95' : 'bg-slate-50 opacity-50'}`}
                     >
-                        <UserPlus className={`w-4 h-4 lg:w-5 lg:h-5 mb-1 lg:mb-2 ${nuevos.length > 0 ? 'text-primary-blue' : 'text-slate-400'}`} />
-                        <span className={`text-xl lg:text-2xl font-display font-black ${nuevos.length > 0 ? 'text-primary-blue' : 'text-slate-400'}`}>{nuevos.length}</span>
+                        <UserPlus className={`w-4 h-4 lg:w-5 lg:h-5 mb-1 lg:mb-2 ${nuevos.length > 0 ? 'text-brand-navy' : 'text-slate-400'}`} />
+                        <span className={`text-xl lg:text-2xl font-display font-black ${nuevos.length > 0 ? 'text-brand-navy' : 'text-slate-400'}`}>{nuevos.length}</span>
                         <span className="text-[8px] lg:text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Nuevos</span>
                     </div>
                     <div
@@ -39,7 +38,7 @@ export default function CustomerLoyalty({ kpis }) {
 
                 {/* Progress bar */}
                 <div className="w-full bg-slate-100 rounded-full h-2 flex overflow-hidden shadow-inner">
-                    <div className="bg-primary-blue h-full transition-all duration-1000" style={{ width: `${(nuevos.length / totalSegmented) * 100}%` }} title="Nuevos" />
+                    <div className="bg-brand-navy h-full transition-all duration-1000" style={{ width: `${(nuevos.length / totalSegmented) * 100}%` }} title="Nuevos" />
                     <div className="bg-emerald-500 h-full transition-all duration-1000" style={{ width: `${(fieles.length / totalSegmented) * 100}%` }} title="Fieles" />
                 </div>
             </div>
@@ -48,11 +47,15 @@ export default function CustomerLoyalty({ kpis }) {
                 <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Criterios de Segmentación</h4>
                 <ul className="text-[10px] space-y-2 text-slate-500">
                     <li className="flex gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-navy shrink-0 mt-1"></span>
+                        <span><strong className="font-bold text-slate-700">Nuevos:</strong> 1 solo pedido en todo el historial.</span>
+                    </li>
+                    <li className="flex gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1"></span>
                         <span><strong className="font-bold text-slate-700">Fieles:</strong> 3 o más pedidos en el historial (independiente del mes).</span>
                     </li>
                     <li className="flex gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary-blue shrink-0 mt-1"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0 mt-1"></span>
                         <span><strong className="font-bold text-slate-700">Importante:</strong> Haz clic en los recuadros de arriba para ver la lista de clientes.</span>
                     </li>
                 </ul>

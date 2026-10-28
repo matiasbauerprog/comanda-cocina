@@ -3,18 +3,7 @@ import KitchenCard from '../components/KitchenCard';
 import { ChefHat } from 'lucide-react';
 
 export default function KitchenView() {
-    const { pedidosActivos } = useStore();
-
-    const activeOrders = pedidosActivos
-        .filter(p => p.estado === 'pendiente' || p.estado === 'en_proceso')
-        .sort((a, b) => {
-            const aHas = !!a.horario_entrega;
-            const bHas = !!b.horario_entrega;
-            if (aHas && !bHas) return -1;
-            if (!aHas && bHas) return 1;
-            if (aHas && bHas) return a.horario_entrega.localeCompare(b.horario_entrega);
-            return 0;
-        });
+    const { pedidosActivos: activeOrders } = useStore();
 
     return (
         <div className="h-full overflow-y-auto p-3 lg:p-4">

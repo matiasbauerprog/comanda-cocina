@@ -1,17 +1,14 @@
 import { useStore } from '../store/useStore';
-import { TrendingUp, DollarSign, PackageCheck, Repeat } from 'lucide-react';
+import { TrendingUp, DollarSign, Repeat } from 'lucide-react';
 import SalesRentability from '../components/analytics/SalesRentability';
 import CustomerLoyalty from '../components/analytics/CustomerLoyalty';
 
 export default function AnalyticsView() {
     const {
-        pedidos,
         analyticsKPIs: kpis,
         analyticsFilter,
         setAnalyticsFilter
     } = useStore();
-
-    if (!kpis) return null;
 
     const topKpis = [
         { title: 'Venta Total', value: `$${Math.round(kpis.totalVendido).toLocaleString('es-AR')}`, icon: <DollarSign className="w-5 h-5" />, sub: 'Ingreso Bruto' },

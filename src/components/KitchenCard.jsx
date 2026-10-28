@@ -1,50 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useStore } from '../store/useStore';
-import { Clock, AlertTriangle, User } from 'lucide-react';
+import { AlertTriangle, User } from 'lucide-react';
+import { useOrderUrgency } from '../hooks/useOrderUrgency';
+import { formatOrderStart } from '../lib/dates';
+
+// Urgencia progresiva: calm > soon > urgent > late
+const URGENCY_STYLES = {
+    none: { border: 'border-slate-200/60', headerBg: 'bg-slate-50/50', headerBorder: 'border-slate-100', clockColor: 'text-slate-400', timeColor: 'text-slate-600', badgeBg: '', badgeText: '' },
+    calm: { border: 'border-brand-navy/30', headerBg: 'bg-brand-navy/5', headerBorder: 'border-brand-navy/10', clockColor: 'text-brand-navy', timeColor: 'text-brand-navy', badgeBg: 'bg-brand-navy/10 border border-brand-navy/20', badgeText: 'text-brand-navy' },
+    soon: { border: 'border-brand-yellow/60', headerBg: 'bg-brand-yellow/10', headerBorder: 'border-brand-yellow/20', clockColor: 'text-amber-600', timeColor: 'text-amber-700', badgeBg: 'bg-brand-yellow', badgeText: 'text-amber-900' },
+    urgent: { border: 'border-brand-red/50', headerBg: 'bg-brand-red/10', headerBorder: 'border-brand-red/20', clockColor: 'text-brand-red', timeColor: 'text-brand-red', badgeBg: 'bg-brand-red', badgeText: 'text-white' },
+    late: { border: 'border-brand-red shadow-xl shadow-brand-red/20', headerBg: 'bg-brand-red/10', headerBorder: 'border-brand-red/30', clockColor: 'text-brand-red', timeColor: 'text-brand-red', badgeBg: 'bg-brand-red', badgeText: 'text-white' },
+};
 
 export default function KitchenCard({ order }) {
-    const [minutesLeft, setMinutesLeft] = useState(null);
-
+    const { urgency, countdownText } = useOrderUrgency(order);
+    const s = URGENCY_STYLES[urgency];
     const hasTime = !!order.horario_entrega;
-
-    // Calculate time remaining
-    useEffect(() => {
-        if (!hasTime) return;
-
-        const calcMinutes = () => {
-            const now = new Date();
-            const [h, m] = order.horario_entrega.split(':').map(Number);
-            const target = new Date();
-            target.setHours(h, m, 0, 0);
-            return Math.round((target - now) / 60000);
-        };
-
-        setMinutesLeft(calcMinutes());
-        const interval = setInterval(() => setMinutesLeft(calcMinutes()), 30000);
-        return () => clearInterval(interval);
-    }, [order.horario_entrega, hasTime]);
-
-    // Progressive urgency: calm > soon > urgent > late
-    const urgency = !hasTime ? 'none'
-        : minutesLeft === null ? 'none'
-            : minutesLeft <= 0 ? 'late'
-                : minutesLeft <= 10 ? 'urgent'
-                    : minutesLeft <= 25 ? 'soon'
-                        : 'calm';
-
-    const styles = {
-        none: { border: 'border-slate-200/60', headerBg: 'bg-slate-50/50', headerBorder: 'border-slate-100', clockColor: 'text-slate-400', timeColor: 'text-slate-600', badgeBg: '', badgeText: '' },
-        calm: { border: 'border-brand-navy/30', headerBg: 'bg-brand-navy/5', headerBorder: 'border-brand-navy/10', clockColor: 'text-brand-navy', timeColor: 'text-brand-navy', badgeBg: 'bg-brand-navy/10 border border-brand-navy/20', badgeText: 'text-brand-navy' },
-        soon: { border: 'border-brand-yellow/60', headerBg: 'bg-brand-yellow/10', headerBorder: 'border-brand-yellow/20', clockColor: 'text-amber-600', timeColor: 'text-amber-700', badgeBg: 'bg-brand-yellow', badgeText: 'text-amber-900' },
-        urgent: { border: 'border-brand-red/50', headerBg: 'bg-brand-red/10', headerBorder: 'border-brand-red/20', clockColor: 'text-brand-red', timeColor: 'text-brand-red', badgeBg: 'bg-brand-red', badgeText: 'text-white' },
-        late: { border: 'border-brand-red shadow-xl shadow-brand-red/20', headerBg: 'bg-brand-red/10', headerBorder: 'border-brand-red/30', clockColor: 'text-brand-red', timeColor: 'text-brand-red', badgeBg: 'bg-brand-red', badgeText: 'text-white' },
-    };
-    const s = styles[urgency];
-
-    const countdownText = minutesLeft === null ? null
-        : minutesLeft <= 0 ? 'ATRASADO'
-            : minutesLeft >= 60 ? `${Math.floor(minutesLeft / 60)}h ${minutesLeft % 60}m`
-                : `${minutesLeft} min`;
 
     return (
         <div className={`animate-card-in glass-card rounded-[2rem] border-4 ${s.border} flex flex-col overflow-hidden relative group transition-all duration-300`}>
@@ -67,7 +37,7 @@ export default function KitchenCard({ order }) {
                 <div className="flex flex-col">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Inicio</span>
                     <span className="text-xs font-bold text-slate-600">
-                        {new Date(order.timestamp_creacion).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                        {formatOrderStart(order.timestamp_creacion)}
                     </span>
                 </div>
 

@@ -1,104 +1,46 @@
 import { useState } from 'react';
-import { Lock, Loader2, KeyRound, ArrowLeft, CheckCircle2, Download } from 'lucide-react';
+import { Lock, Loader2, Download, ChefHat, LayoutDashboard } from 'lucide-react';
+import { signIn } from '../lib/auth';
 
-const DEFAULT_OWNER_HASH = 'cbfad02f9ed2a8d1e08d8f74f5303e9eb93637d47f82ab6f1c15871cf8dd0481'; // "1212"
-const DEFAULT_KITCHEN_HASH = 'c1f330d0aff31c1c87403f1e4347bcc21aff7c179908723535f2b31723702525'; // "5555"
+const ROLE_OPTIONS = [
+    { id: 'owner', label: 'Dueño', icon: LayoutDashboard },
+    { id: 'kitchen', label: 'Cocina', icon: ChefHat },
+];
 
-// Polyfill function specifically for SHA-256 in browser
-async function sha256(message) {
-    const msgBuffer = new TextEncoder().encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
-}
-
-export default function LoginView({ onLogin }) {
+export default function LoginView() {
+    const [role, setRole] = useState('owner');
     const [password, setPassword] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [isChanging, setIsChanging] = useState(false);
-
-    const [error, setError] = useState(false);
+    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState('');
 
     // PWA Install — uses global prompt captured in main.jsx
     const handleInstall = async () => {
         const prompt = window.deferredInstallPrompt;
         if (prompt) {
-            console.log('[PWA] Triggering install prompt...');
             prompt.prompt();
             const { outcome } = await prompt.userChoice;
-            console.log('[PWA] User choice:', outcome);
             if (outcome === 'accepted') {
                 window.deferredInstallPrompt = null;
             }
+        } else if (window.matchMedia('(display-mode: standalone)').matches) {
+            alert('¡La app ya está instalada!');
         } else {
-            console.warn('[PWA] No install prompt available. Check DevTools > Application > Manifest for errors.');
-            // Check if already installed (display-mode: standalone)
-            if (window.matchMedia('(display-mode: standalone)').matches) {
-                alert('¡La app ya está instalada!');
-            } else {
-                alert('Tu navegador aún no habilitó la instalación. Intentá recargar con Ctrl+F5 y esperá unos segundos antes de tocar "Instalar App".');
-            }
+            alert('Tu navegador aún no habilitó la instalación. Intentá recargar con Ctrl+F5 y esperá unos segundos antes de tocar "Instalar App".');
         }
     };
 
-    const getOwnerHash = () => localStorage.getItem('gaspacho_owner_hash') || DEFAULT_OWNER_HASH;
-    const getKitchenHash = () => localStorage.getItem('gaspacho_kitchen_hash') || DEFAULT_KITCHEN_HASH;
-
+    // Al ingresar, App detecta la sesión nueva (onAuthStateChange) y cambia de vista.
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(false);
-        setSuccess('');
+        setError('');
         setLoading(true);
-
-        // Add small artificial delay to prevent brute-forcing easily via UI 
-        await new Promise(r => setTimeout(r, 400));
-
-        try {
-            const hash = await sha256(password);
-            const ownerHash = getOwnerHash();
-            const kitchenHash = getKitchenHash();
-
-            if (isChanging) {
-                if (hash === ownerHash) {
-                    const newHash = await sha256(newPassword);
-                    localStorage.setItem('gaspacho_owner_hash', newHash);
-                    handleSuccess('¡Clave de Dueño actualizada!');
-                } else if (hash === kitchenHash) {
-                    const newHash = await sha256(newPassword);
-                    localStorage.setItem('gaspacho_kitchen_hash', newHash);
-                    handleSuccess('¡Clave de Cocina actualizada!');
-                } else {
-                    setError(true);
-                }
-            } else {
-                if (hash === ownerHash) {
-                    onLogin('owner');
-                } else if (hash === kitchenHash) {
-                    onLogin('kitchen');
-                } else {
-                    setError(true);
-                    setPassword('');
-                }
-            }
-        } catch (err) {
-            console.error("Error hashing password", err);
-            setError(true);
-        } finally {
-            setLoading(false);
+        const err = await signIn(role, password);
+        setLoading(false);
+        if (err) {
+            console.error('Error de login:', err);
+            setError(err.status === 400 ? 'Contraseña incorrecta' : 'No se pudo conectar. Revisá la conexión.');
+            setPassword('');
         }
-    };
-
-    const handleSuccess = (msg) => {
-        setSuccess(msg);
-        setPassword('');
-        setNewPassword('');
-        setTimeout(() => {
-            setIsChanging(false);
-            setSuccess('');
-        }, 2500);
     };
 
     return (
@@ -121,98 +63,69 @@ export default function LoginView({ onLogin }) {
                     </span>
                 </div>
 
-                {success ? (
-                    <div className="flex flex-col items-center gap-3 animate-in zoom-in duration-500 py-4">
-                        <CheckCircle2 className="w-16 h-16 text-green-500" />
-                        <span className="text-brand-navy font-bold text-center">{success}</span>
+                <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
+                    {/* Rol */}
+                    <div className="flex bg-slate-100/70 p-1 rounded-2xl ring-1 ring-slate-200/60">
+                        {ROLE_OPTIONS.map(({ id, label, icon: Icon }) => (
+                            <button
+                                key={id}
+                                type="button"
+                                onClick={() => { setRole(id); setError(''); }}
+                                className={`flex-1 h-10 rounded-xl text-xs font-display font-bold tracking-wider uppercase flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer ${role === id
+                                    ? 'bg-brand-navy text-white shadow-lg shadow-brand-navy/20'
+                                    : 'text-slate-500 hover:text-brand-navy hover:bg-white/80'
+                                    }`}
+                            >
+                                <Icon className="w-3.5 h-3.5" />
+                                {label}
+                            </button>
+                        ))}
                     </div>
-                ) : (
-                    <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
-                        <div className="relative">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                            <input
-                                type="password"
-                                placeholder={isChanging ? "Contraseña actual" : "Contraseña"}
-                                value={password}
-                                onChange={(e) => {
-                                    setPassword(e.target.value);
-                                    if (error) setError(false);
-                                }}
-                                className={`w-full h-14 pl-12 pr-4 rounded-2xl bg-white border-2 text-center text-xl tracking-widest font-bold placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal placeholder:text-base focus:outline-none transition-all duration-300
+
+                    <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <input
+                            type="password"
+                            placeholder="Contraseña"
+                            autoComplete="current-password"
+                            value={password}
+                            onChange={(e) => {
+                                setPassword(e.target.value);
+                                if (error) setError('');
+                            }}
+                            className={`w-full h-14 pl-12 pr-4 rounded-2xl bg-white border-2 text-center text-xl tracking-widest font-bold placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal placeholder:text-base focus:outline-none transition-all duration-300
                                 ${error
-                                        ? 'border-brand-red/50 text-brand-red animate-[shake_0.4s_ease-in-out]'
-                                        : 'border-slate-100 text-brand-navy focus:border-brand-navy/20 focus:shadow-lg focus:shadow-brand-navy/5'
-                                    }
+                                    ? 'border-brand-red/50 text-brand-red animate-[shake_0.4s_ease-in-out]'
+                                    : 'border-slate-100 text-brand-navy focus:border-brand-navy/20 focus:shadow-lg focus:shadow-brand-navy/5'
+                                }
                                 `}
-                                autoFocus
-                                disabled={loading}
-                                inputMode="numeric"
-                            />
-                        </div>
+                            autoFocus
+                            disabled={loading}
+                        />
+                    </div>
 
-                        {isChanging && (
-                            <div className="relative animate-in slide-in-from-top-4 fade-in duration-300">
-                                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                <input
-                                    type="password"
-                                    placeholder="Nueva contraseña"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white border-2 border-slate-100 text-brand-navy text-center text-xl tracking-widest font-bold placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal placeholder:text-base focus:outline-none transition-all duration-300 focus:border-brand-navy/20 focus:shadow-lg focus:shadow-brand-navy/5"
-                                    disabled={loading}
-                                    inputMode="numeric"
-                                />
-                            </div>
-                        )}
+                    <button
+                        type="submit"
+                        disabled={!password || loading}
+                        className="w-full h-14 bg-brand-navy text-white rounded-2xl font-display font-bold tracking-widest uppercase hover:bg-opacity-90 active:scale-95 transition-all duration-300 shadow-xl shadow-brand-navy/20 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center mt-2"
+                    >
+                        {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Ingresar'}
+                    </button>
+                </form>
 
-                        <button
-                            type="submit"
-                            disabled={!password || (isChanging && !newPassword) || loading}
-                            className="w-full h-14 bg-brand-navy text-white rounded-2xl font-display font-bold tracking-widest uppercase hover:bg-opacity-90 active:scale-95 transition-all duration-300 shadow-xl shadow-brand-navy/20 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center mt-2"
-                        >
-                            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (isChanging ? 'Actualizar' : 'Ingresar')}
-                        </button>
-                    </form>
-                )}
-
-                {error && !success && (
+                {error && (
                     <p className="mt-4 text-brand-red text-sm font-medium animate-in fade-in zoom-in duration-300">
-                        {isChanging ? 'La contraseña actual es incorrecta' : 'Contraseña incorrecta'}
+                        {error}
                     </p>
                 )}
 
-                {!success && (
-                    <div className="flex items-center gap-4 mt-6">
-                        <button
-                            onClick={() => {
-                                setIsChanging(!isChanging);
-                                setError(false);
-                                setPassword('');
-                                setNewPassword('');
-                            }}
-                            className="text-sm text-slate-400 hover:text-brand-navy transition-colors font-medium flex items-center gap-1"
-                        >
-                            {isChanging ? (
-                                <><ArrowLeft className="w-4 h-4" /> Volver al ingreso</>
-                            ) : (
-                                '¿Cambiar contraseña?'
-                            )}
-                        </button>
-
-                        {!isChanging && (
-                            <>
-                                <span className="text-slate-200">|</span>
-                                <button
-                                    onClick={handleInstall}
-                                    className="text-sm text-slate-400 hover:text-brand-navy transition-colors font-medium flex items-center gap-1.5"
-                                >
-                                    <Download className="w-4 h-4" />
-                                    Instalar App
-                                </button>
-                            </>
-                        )}
-                    </div>
-                )}
+                <button
+                    onClick={handleInstall}
+                    className="mt-6 text-sm text-slate-400 hover:text-brand-navy transition-colors font-medium flex items-center gap-1.5"
+                >
+                    <Download className="w-4 h-4" />
+                    Instalar App
+                </button>
             </div>
 
             <style dangerouslySetInnerHTML={{

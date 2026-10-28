@@ -1,4 +1,4 @@
-import { TrendingUp, Utensils, Clock, DollarSign } from 'lucide-react';
+import { Utensils, Clock } from 'lucide-react';
 
 export default function SalesRentability({ kpis }) {
     if (!kpis) return null;
@@ -7,17 +7,15 @@ export default function SalesRentability({ kpis }) {
 
     return (
         <div className="flex flex-col gap-8">
-            {/* 1. Top Platos (Approximated Margin) */}
+            {/* 1. Top Platos por unidades vendidas */}
             <div>
                 <h3 className="text-sm font-display font-black text-brand-navy tracking-wide mb-4 flex items-center gap-2">
                     <Utensils className="w-4 h-4 text-brand-yellow" />
-                    Top 5 Platos (Margen Est.)
+                    Top 5 Platos Más Vendidos
                 </h3>
-                {kpis.topPlatosRentables.length > 0 ? (
+                {kpis.topPlatos.length > 0 ? (
                     <div className="space-y-3">
-                        {/* EXPLICACIÓN: Usamos 'plato.name' en vez de 'i' como key.
-                            Evita bugs visuales de re-renderizado cuando las posiciones en los rankings cambian. */}
-                        {kpis.topPlatosRentables.map((plato, i) => (
+                        {kpis.topPlatos.map((plato, i) => (
                             <div key={plato.name} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-6 h-6 shrink-0 rounded-full bg-white flex items-center justify-center text-[10px] font-black tracking-tighter text-slate-400 shadow-sm">
@@ -25,11 +23,8 @@ export default function SalesRentability({ kpis }) {
                                     </div>
                                     <span className="text-xs font-bold text-slate-700 capitalize truncate" title={plato.name}>{plato.name}</span>
                                 </div>
-                                <div className="flex items-center gap-4 shrink-0 pl-2">
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase">{plato.count} u.</div>
-                                    <div className="text-sm font-display font-black text-emerald-600">
-                                        ~${Math.round(plato.margenEstimado).toLocaleString('es-AR')}
-                                    </div>
+                                <div className="text-sm font-display font-black text-emerald-600 shrink-0 pl-2">
+                                    {plato.count} u.
                                 </div>
                             </div>
                         ))}
@@ -41,10 +36,10 @@ export default function SalesRentability({ kpis }) {
                 )}
             </div>
 
-            {/* 3. Hourly Heatmap */}
+            {/* 2. Hourly Heatmap */}
             <div>
                 <h3 className="text-sm font-display font-black text-brand-navy tracking-wide mb-6 flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-primary-blue" />
+                    <Clock className="w-4 h-4 text-brand-navy" />
                     Ventas por Franja Horaria
                 </h3>
                 <div className="h-32 w-full flex items-end gap-1 px-1">
