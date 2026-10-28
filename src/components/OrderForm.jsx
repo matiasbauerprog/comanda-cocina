@@ -5,7 +5,7 @@ import ManageModal from './ManageModal';
 import CustomDropdown from './CustomDropdown';
 import { useIsMobile, isMobileViewport } from '../hooks/useIsMobile';
 import { formatPedidoText } from '../lib/pedidos';
-import { getDirecciones } from '../lib/clientes';
+import { getDirecciones, direccionLabel, hasDireccion, addDireccion, normalizeSearch } from '../lib/clientes';
 import DireccionesEditor from './DireccionesEditor';
 
 const METODOS_PAGO = [
@@ -40,6 +40,7 @@ export default function OrderForm() {
 
     // Selected values
     const [selectedClienteId, setSelectedClienteId] = useState('');
+    const [isSavingDireccion, setIsSavingDireccion] = useState(false);
     const [direccion, setDireccion] = useState('');
     const [selectedPlatos, setSelectedPlatos] = useState([]); // [{platoId, nombre, monto}]
     const [horarioEntrega, setHorarioEntrega] = useState('');
@@ -78,10 +79,23 @@ export default function OrderForm() {
         setSelectedClienteId(id);
         if (id) {
             const c = clientes.find(c => c.id === id);
-            if (c) setDireccion(c.direccion || '');
+            if (c) setDireccion(getDirecciones(c)[0]?.direccion ?? '');
         } else {
             setDireccion('');
         }
+    };
+
+    const selectedCliente = clientes.find(c => c.id === selectedClienteId);
+    const clienteDirecciones = selectedCliente ? getDirecciones(selectedCliente) : [];
+    const canSaveDireccion = !!selectedCliente && direccion.trim() !== '' && !hasDireccion(clienteDirecciones, direccion);
+
+    const saveDireccion = async () => {
+        setIsSavingDireccion(true);
+        await updateCliente(selectedCliente.id, {
+            nombre: selectedCliente.nombre,
+            direcciones: addDireccion(clienteDirecciones, direccion),
+        });
+        setIsSavingDireccion(false);
     };
 
     // Dish management
@@ -109,7 +123,7 @@ export default function OrderForm() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const cliente = clientes.find(c => c.id === selectedClienteId);
+        const cliente = selectedCliente;
         if (!cliente || selectedPlatos.length === 0 || isSending) return;
 
         setIsSending(true);
@@ -181,7 +195,7 @@ export default function OrderForm() {
                                         options={clientes.map(c => ({
                                             id: c.id,
                                             label: c.nombre,
-                                            detail: c.direccion
+                                            detail: getDirecciones(c).map(d => d.direccion).join(' · ')
                                         }))}
                                     />
                                 </div>
@@ -194,6 +208,40 @@ export default function OrderForm() {
                                     />
                                 </div>
                             </div>
+
+                            {/* Direcciones guardadas del cliente */}
+                            {(clienteDirecciones.length > 0 || canSaveDireccion) && (
+                                <div className="flex flex-wrap gap-2 -mt-1">
+                                    {clienteDirecciones.map((d, i) => {
+                                        const isActive = normalizeSearch(d.direccion) === normalizeSearch(direccion);
+                                        return (
+                                            <button
+                                                key={i}
+                                                type="button"
+                                                onClick={() => setDireccion(d.direccion)}
+                                                title={d.direccion}
+                                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer max-w-[14rem] truncate ${isActive
+                                                    ? 'bg-brand-navy text-white shadow-md shadow-brand-navy/20'
+                                                    : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-brand-navy'
+                                                    }`}
+                                            >
+                                                {direccionLabel(d)}
+                                            </button>
+                                        );
+                                    })}
+                                    {canSaveDireccion && (
+                                        <button
+                                            type="button"
+                                            onClick={saveDireccion}
+                                            disabled={isSavingDireccion}
+                                            className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border border-dashed border-slate-300 text-slate-500 hover:text-brand-navy hover:border-brand-navy/40 transition-all cursor-pointer disabled:opacity-50"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                            {isSavingDireccion ? 'Guardando...' : 'Guardar en el cliente'}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Row 2: Pedido */}
                             <div className="space-y-4">
