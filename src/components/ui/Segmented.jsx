@@ -12,12 +12,12 @@ export default function Segmented({ options, value, onChange, size = 'md', class
                         key={id}
                         type="button"
                         onClick={() => onChange(id)}
-                        className={`flex-1 flex items-center justify-center gap-2 px-3.5 rounded-lg font-semibold whitespace-nowrap transition-colors cursor-pointer ${height} ${isActive
+                        className={`flex-1 flex items-center justify-center gap-2 px-2 sm:px-3.5 rounded-lg font-semibold whitespace-nowrap transition-colors cursor-pointer ${height} ${isActive
                             ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(11,27,46,0.08),0_0_0_1px_rgba(11,27,46,0.04)]'
                             : 'text-ink-2 hover:text-ink'
                             }`}
                     >
-                        {Icon && <Icon className="w-[15px] h-[15px] shrink-0" />}
+                        {Icon && <Icon className="w-[15px] h-[15px] shrink-0 hidden min-[400px]:block" />}
                         {label}
                         {badge ? (
                             <span className="font-mono text-[11px] font-semibold min-w-5 h-[18px] px-1.5 rounded-full flex items-center justify-center bg-brand-red text-white">

@@ -3,7 +3,6 @@ import { useStore } from '../store/useStore';
 import { X, Clock, CheckCircle, List, Banknote, CreditCard, ChevronDown, Frown, Calendar } from 'lucide-react';
 import CalendarPopover from './CalendarPopover';
 import DailyOrderCard from './DailyOrderCard';
-import HeaderKpis from './KpiPanel';
 import { useIsMobile, isMobileViewport } from '../hooks/useIsMobile';
 import { filterToCalendarDate, formatFilterLabel, formatTime } from '../lib/dates';
 
@@ -172,10 +171,6 @@ export default function DailyOrders() {
                     </button>
                 </div>
 
-                {/* KPIs */}
-                <div className="hidden md:flex flex-1 justify-end items-center mr-4" onClick={e => e.stopPropagation()}>
-                    <HeaderKpis />
-                </div>
 
                 {/* Mobile Chevron */}
                 <div className="lg:hidden text-slate-400">
