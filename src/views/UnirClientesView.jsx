@@ -23,7 +23,7 @@ function writeDismissed(keys) {
     }
 }
 
-const inputClass = "w-full bg-white border border-slate-200 rounded-full px-4 py-2 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:border-slate-300 transition-all font-sans font-medium";
+const inputClass = "w-full bg-surface border border-line-strong rounded-[9px] px-3 h-10 text-sm text-ink  focus:outline-none focus:border-ink-3 transition-all ";
 
 // Formulario de unión para un conjunto de clientes. `candidatos` es la lista que se
 // puede tildar; al cambiar los tildados se recalcula la propuesta (nombre editado se conserva).
@@ -58,7 +58,7 @@ function MergeCard({ candidatos, onDismiss, onDone }) {
     };
 
     return (
-        <div className="bg-white rounded-3xl border border-slate-200/70 shadow-sm p-5 flex flex-col gap-4">
+        <div className="bg-surface rounded-2xl border border-line p-5 flex flex-col gap-4">
             <div className="flex flex-col gap-2">
                 {candidatos.map(c => (
                     <label key={c.id} className="flex items-start gap-3 cursor-pointer">
@@ -69,9 +69,9 @@ function MergeCard({ candidatos, onDismiss, onDone }) {
                             className="mt-1 w-4 h-4 accent-brand-navy"
                         />
                         <span className="min-w-0">
-                            <span className="font-bold text-sm text-slate-900 block">{c.nombre}</span>
+                            <span className="font-bold text-sm text-ink block">{c.nombre}</span>
                             {getDirecciones(c).map((d, i) => (
-                                <span key={i} className="text-xs text-slate-400 block truncate">{d.etiqueta ? `${d.etiqueta} · ${d.direccion}` : d.direccion}</span>
+                                <span key={i} className="text-xs text-ink-3 block truncate">{d.etiqueta ? `${d.etiqueta} · ${d.direccion}` : d.direccion}</span>
                             ))}
                         </span>
                     </label>
@@ -79,13 +79,13 @@ function MergeCard({ candidatos, onDismiss, onDone }) {
             </div>
 
             <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-3">Nombre final</label>
+                <label className="block text-xs font-semibold text-ink-2 mb-1 ml-3">Nombre final</label>
                 <input value={nombre} onChange={e => setNombre(e.target.value)} className={inputClass} />
             </div>
 
             {direcciones.length > 0 && (
                 <div>
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-3">Direcciones</span>
+                    <span className="block text-xs font-semibold text-ink-2 mb-1 ml-3">Direcciones</span>
                     <div className="flex flex-col gap-1.5">
                         {direcciones.map(d => (
                             <div key={d.direccion} className="flex gap-2 items-center">
@@ -95,7 +95,7 @@ function MergeCard({ candidatos, onDismiss, onDone }) {
                                     placeholder="Etiqueta"
                                     className={`${inputClass} !w-28 shrink-0`}
                                 />
-                                <span className="text-sm text-slate-600 truncate">{d.direccion}</span>
+                                <span className="text-sm text-ink-2 truncate">{d.direccion}</span>
                             </div>
                         ))}
                     </div>
@@ -103,13 +103,13 @@ function MergeCard({ candidatos, onDismiss, onDone }) {
             )}
 
             {collision && (
-                <p className="text-xs font-bold text-brand-red">
+                <p className="text-xs font-bold text-danger">
                     Ya existe otro cliente llamado «{collision.nombre}» que no está en esta unión. Elegí otro nombre final
                     (por ejemplo con el apellido) para no mezclar sus pedidos.
                 </p>
             )}
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-ink-3">
                 {pedidosAfectados} pedidos pasan a llamarse «{nombre.trim() || '…'}».
             </p>
 
@@ -118,7 +118,7 @@ function MergeCard({ candidatos, onDismiss, onDone }) {
                     <button
                         type="button"
                         onClick={onDismiss}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 h-[38px] px-3.5 rounded-[9px] text-[13px] font-semibold text-ink-2 hover:bg-paper transition-colors cursor-pointer"
                     >
                         <X className="w-4 h-4" />
                         No son la misma persona
@@ -128,7 +128,7 @@ function MergeCard({ candidatos, onDismiss, onDone }) {
                     type="button"
                     onClick={handleMerge}
                     disabled={!canMerge}
-                    className="flex items-center gap-1.5 px-5 py-2 bg-brand-navy text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-brand-navy/20 transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:active:scale-100"
+                    className="flex items-center gap-1.5 h-[38px] px-4 bg-brand-navy hover:bg-[#001A3A] text-white rounded-[9px] text-[13px] font-semibold cursor-pointer disabled:bg-line disabled:text-ink-4 disabled:cursor-not-allowed"
                 >
                     <Merge className="w-4 h-4" />
                     {isSaving ? 'Uniendo...' : 'Unir'}
@@ -164,13 +164,13 @@ export default function UnirClientesView() {
             <div className="max-w-2xl mx-auto flex flex-col gap-8">
                 <section className="flex flex-col gap-4">
                     <div>
-                        <h2 className="text-lg font-display font-black uppercase tracking-wide text-brand-navy">Clientes parecidos</h2>
-                        <p className="text-sm text-slate-400">
+                        <h2 className="font-display text-[22px] font-bold tracking-[-0.02em] text-ink">Clientes parecidos</h2>
+                        <p className="text-sm text-ink-3">
                             Clientes cuyo nombre empieza igual. Si son la misma persona, unilos: queda uno solo con todas las direcciones.
                         </p>
                     </div>
                     {groups.length === 0 ? (
-                        <p className="text-slate-400 italic text-sm text-center py-6">No hay clientes parecidos para revisar.</p>
+                        <p className="text-ink-3 italic text-sm text-center py-6">No hay clientes parecidos para revisar.</p>
                     ) : (
                         groups.map(g => (
                             // key con los ids: si el grupo cambia (se unió o se agregó alguien) el formulario se reinicia
@@ -185,11 +185,11 @@ export default function UnirClientesView() {
 
                 <section className="flex flex-col gap-4">
                     <div>
-                        <h2 className="text-lg font-display font-black uppercase tracking-wide text-brand-navy">Unir a mano</h2>
-                        <p className="text-sm text-slate-400">Buscá y tildá los clientes que son la misma persona.</p>
+                        <h2 className="font-display text-[22px] font-bold tracking-[-0.02em] text-ink">Unir a mano</h2>
+                        <p className="text-sm text-ink-3">Buscá y tildá los clientes que son la misma persona.</p>
                     </div>
                     <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-4" />
                         <input
                             value={query}
                             onChange={e => setQuery(e.target.value)}
@@ -201,21 +201,21 @@ export default function UnirClientesView() {
                     {(resultados.length > 0 || manualSelected.length > 0) && (
                         <div className="flex flex-col gap-1">
                             {[...manualSelected, ...resultados.filter(c => !manualIds.includes(c.id))].map(c => (
-                                <label key={c.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white cursor-pointer">
+                                <label key={c.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface cursor-pointer">
                                     <input
                                         type="checkbox"
                                         checked={manualIds.includes(c.id)}
                                         onChange={() => toggleManual(c.id)}
                                         className="w-4 h-4 accent-brand-navy"
                                     />
-                                    <span className="font-bold text-sm text-slate-900">{c.nombre}</span>
-                                    <span className="text-xs text-slate-400 truncate">{getDirecciones(c).map(d => d.direccion).join(' · ')}</span>
+                                    <span className="font-bold text-sm text-ink">{c.nombre}</span>
+                                    <span className="text-xs text-ink-3 truncate">{getDirecciones(c).map(d => d.direccion).join(' · ')}</span>
                                 </label>
                             ))}
                         </div>
                     )}
                     {query.trim() && resultados.length === 0 && (
-                        <p className="text-slate-400 italic text-sm">Sin resultados para «{query}»</p>
+                        <p className="text-ink-3 italic text-sm">Sin resultados para «{query}»</p>
                     )}
 
                     {manualSelected.length >= 2 ? (
@@ -225,7 +225,7 @@ export default function UnirClientesView() {
                             onDone={() => { setManualIds([]); setQuery(''); }}
                         />
                     ) : (
-                        <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                        <p className="text-xs text-ink-3 flex items-center gap-1.5">
                             <Users className="w-4 h-4" />
                             Tildá al menos 2 clientes para unirlos.
                         </p>

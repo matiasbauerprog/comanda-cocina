@@ -1,6 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 
-const inputClass = "bg-white border border-slate-200 rounded-full px-3 py-1.5 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:border-slate-300 transition-all font-sans font-medium min-w-0";
+const inputClass = "bg-surface border border-line-strong rounded-[9px] px-3 h-9 text-sm text-ink focus:outline-none focus:border-ink-3 min-w-0";
 
 // Lista editable de direcciones de un cliente: [{ etiqueta, direccion }].
 export default function DireccionesEditor({ value, onChange }) {
@@ -36,7 +36,7 @@ export default function DireccionesEditor({ value, onChange }) {
             <button
                 type="button"
                 onClick={() => onChange([...value, { etiqueta: '', direccion: '' }])}
-                className="self-start flex items-center gap-1 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-brand-navy transition-colors cursor-pointer"
+                className="self-start flex items-center gap-1 px-3 py-1 text-xs font-semibold text-ink-3 hover:text-brand-navy transition-colors cursor-pointer"
             >
                 <Plus className="w-3 h-3" />
                 Dirección

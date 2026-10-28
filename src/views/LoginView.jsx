@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Lock, Loader2, Download, ChefHat, LayoutDashboard } from 'lucide-react';
 import { signIn } from '../lib/auth';
+import Segmented from '../components/ui/Segmented';
 
 const ROLE_OPTIONS = [
     { id: 'owner', label: 'Gaspi', icon: LayoutDashboard },
@@ -44,87 +45,63 @@ export default function LoginView() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAF9F6] px-4 font-sans relative overflow-hidden">
-            {/* Decorative background blurs to keep Gaspacho's modern aesthetic */}
-            <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-brand-navy/5 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-96 h-96 bg-brand-red/5 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="w-full max-w-sm glass rounded-[2rem] p-8 sm:p-10 flex flex-col items-center animate-in fade-in slide-in-from-bottom-8 duration-700 relative z-10 shadow-2xl shadow-brand-navy/5 border border-white/40">
-
-                {/* Logo */}
-                <div className="flex flex-col items-center gap-4 mb-8">
-                    <img
-                        src="/chef-logo.jpg"
-                        alt="Gaspacho"
-                        className="w-20 h-20 rounded-3xl shadow-xl shadow-slate-200/60 object-cover transition-all"
-                    />
-                    <span className="text-brand-navy text-3xl font-display font-black tracking-tighter leading-none">
-                        GASPACHO<span className="text-brand-red">.</span>
-                    </span>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-paper px-4">
+            <div className="w-full max-w-sm bg-surface border border-line rounded-[18px] p-7 sm:p-8 flex flex-col animate-card-in">
+                <div className="flex items-center gap-3 mb-7">
+                    <img src="/chef-logo.jpg" alt="Gaspacho" className="w-12 h-12 rounded-xl object-cover object-[center_30%]" />
+                    <div className="flex flex-col leading-none">
+                        <span className="font-display font-extrabold text-[26px] tracking-[-0.03em] text-brand-navy">
+                            Gaspacho<span className="text-brand-red">.</span>
+                        </span>
+                        <span className="text-xs text-ink-3 mt-1">Pedidos · cocina · ventas</span>
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
-                    {/* Rol */}
-                    <div className="flex bg-slate-100/70 p-1 rounded-2xl ring-1 ring-slate-200/60">
-                        {ROLE_OPTIONS.map(({ id, label, icon: Icon }) => (
-                            <button
-                                key={id}
-                                type="button"
-                                onClick={() => { setRole(id); setError(''); }}
-                                className={`flex-1 h-10 rounded-xl text-xs font-display font-bold tracking-wider uppercase flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer ${role === id
-                                    ? 'bg-brand-navy text-white shadow-lg shadow-brand-navy/20'
-                                    : 'text-slate-500 hover:text-brand-navy hover:bg-white/80'
-                                    }`}
-                            >
-                                <Icon className="w-3.5 h-3.5" />
-                                {label}
-                            </button>
-                        ))}
-                    </div>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <Segmented
+                        options={ROLE_OPTIONS}
+                        value={role}
+                        onChange={(id) => { setRole(id); setError(''); }}
+                    />
 
-                    <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <input
-                            type="password"
-                            placeholder="Contraseña"
-                            autoComplete="current-password"
-                            value={password}
-                            onChange={(e) => {
-                                setPassword(e.target.value);
-                                if (error) setError('');
-                            }}
-                            className={`w-full h-14 pl-12 pr-4 rounded-2xl bg-white border-2 text-center text-xl tracking-widest font-bold placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal placeholder:text-base focus:outline-none transition-all duration-300
-                                ${error
-                                    ? 'border-brand-red/50 text-brand-red animate-[shake_0.4s_ease-in-out]'
-                                    : 'border-slate-100 text-brand-navy focus:border-brand-navy/20 focus:shadow-lg focus:shadow-brand-navy/5'
-                                }
-                                `}
-                            autoFocus
-                            disabled={loading}
-                        />
-                    </div>
+                    <label className="flex flex-col gap-2">
+                        <span className="text-xs font-semibold text-ink-2">Contraseña</span>
+                        <div className={`flex items-center gap-2.5 h-12 px-3.5 rounded-xl border bg-surface ${error ? 'border-brand-red animate-[shake_0.4s_ease-in-out]' : 'border-line-strong focus-within:border-ink-3'}`}>
+                            <Lock className="w-4 h-4 text-ink-4 shrink-0" />
+                            <input
+                                type="password"
+                                autoComplete="current-password"
+                                value={password}
+                                onChange={(e) => {
+                                    setPassword(e.target.value);
+                                    if (error) setError('');
+                                }}
+                                className="flex-1 min-w-0 h-full bg-transparent text-base text-ink focus:outline-none"
+                                autoFocus
+                                disabled={loading}
+                            />
+                        </div>
+                    </label>
 
                     <button
                         type="submit"
                         disabled={!password || loading}
-                        className="w-full h-14 bg-brand-navy text-white rounded-2xl font-display font-bold tracking-widest uppercase hover:bg-opacity-90 active:scale-95 transition-all duration-300 shadow-xl shadow-brand-navy/20 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center mt-2"
+                        className="h-[52px] rounded-xl bg-brand-navy hover:bg-[#001A3A] text-white text-[15px] font-semibold flex items-center justify-center cursor-pointer disabled:bg-line disabled:text-ink-4 disabled:cursor-not-allowed"
                     >
-                        {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Ingresar'}
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Ingresar'}
                     </button>
                 </form>
 
                 {error && (
-                    <p className="mt-4 text-brand-red text-sm font-medium animate-in fade-in zoom-in duration-300">
-                        {error}
-                    </p>
+                    <p className="mt-4 text-danger text-sm font-medium text-center">{error}</p>
                 )}
 
                 <button
                     onClick={handleInstall}
-                    className="mt-6 text-sm text-slate-400 hover:text-brand-navy transition-colors font-medium flex items-center gap-1.5"
+                    className="mt-6 self-center text-[13px] text-ink-3 hover:text-brand-navy transition-colors font-medium flex items-center gap-1.5 cursor-pointer"
                 >
                     <Download className="w-4 h-4" />
-                    Instalar App
+                    Instalar app
                 </button>
             </div>
 

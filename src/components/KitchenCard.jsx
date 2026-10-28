@@ -1,5 +1,5 @@
 import { useOrderUrgency } from '../hooks/useOrderUrgency';
-import { formatTime } from '../lib/dates';
+import { formatOrderStart } from '../lib/dates';
 import { pedidoDisplayItems } from '../lib/pedidos';
 import { URGENCY_THEME, countdownLabel } from '../lib/urgency';
 import { formatMoney } from '../lib/format';
@@ -18,7 +18,7 @@ export default function KitchenCard({ order }) {
             <div className="px-[18px] pt-4 pb-1.5">
                 <div className="text-xl font-bold text-night-ink tracking-[-0.01em]">{order.cliente.nombre}</div>
                 <div className="text-[13px] text-night-ink-2 mt-0.5">
-                    {order.cliente.direccion ? `${order.cliente.direccion} · ` : ''}ingresó {formatTime(order.timestamp_creacion)}
+                    {order.cliente.direccion ? `${order.cliente.direccion} · ` : ''}ingresó {formatOrderStart(order.timestamp_creacion)}
                 </div>
             </div>
             <div className="px-[18px] pt-2.5 pb-4 flex flex-col gap-2">

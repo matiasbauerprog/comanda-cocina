@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pencil, X, Check, Trash2, MapPin, MessageSquareText } from 'lucide-react';
 import { useOrderUrgency } from '../hooks/useOrderUrgency';
-import { formatTime } from '../lib/dates';
+import { formatOrderStart } from '../lib/dates';
 import { pedidoDisplayItems } from '../lib/pedidos';
 import { URGENCY_THEME, countdownLabel } from '../lib/urgency';
 import { formatMoney } from '../lib/format';
@@ -72,7 +72,7 @@ export default function DailyOrderCard({ order, onSave, onDelete, onReady }) {
                     <span className="font-mono text-xl font-semibold tracking-[-0.02em]">{order.horario_entrega || '--:--'}</span>
                     <span className="text-xs font-semibold">{countdownLabel(minutesLeft)}</span>
                 </div>
-                <span className="text-[11px] opacity-80">Ingresó {formatTime(order.timestamp_creacion)}</span>
+                <span className="text-[11px] opacity-80">Ingresó {formatOrderStart(order.timestamp_creacion)}</span>
             </div>
 
             {isEditing ? (
