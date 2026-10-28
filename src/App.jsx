@@ -8,8 +8,12 @@ import OwnerView from './views/OwnerView';
 import KitchenView from './views/KitchenView';
 import AnalyticsView from './views/AnalyticsView';
 import LoginView from './views/LoginView';
+import UnirClientesView from './views/UnirClientesView';
 
-import { ChefHat, LayoutDashboard, Menu, X, TrendingUp, Loader2, LogOut, KeyRound, AlertTriangle } from 'lucide-react';
+import { ChefHat, LayoutDashboard, Menu, X, TrendingUp, Loader2, LogOut, KeyRound, AlertTriangle, ArrowLeft } from 'lucide-react';
+
+// Página aparte para que el dueño una clientes duplicados (link que se comparte).
+const UNIR_CLIENTES_PATH = '/unir-clientes';
 
 function NavButton({ currentView, targetView, icon: Icon, label, onClick, isMobile = false }) {
   const isActive = currentView === targetView;
@@ -90,6 +94,46 @@ function AppContent({ userRole, onLogout }) {
   }
 
   const isKitchen = userRole === 'kitchen';
+
+  if (window.location.pathname === UNIR_CLIENTES_PATH) {
+    if (isKitchen) {
+      return (
+        <FullScreenMessage>
+          <AlertTriangle className="w-12 h-12 text-brand-red" />
+          <span className="text-brand-navy font-bold">Solo Gaspi puede usar esta página.</span>
+          <button onClick={onLogout} className="px-6 py-2 bg-brand-navy text-white rounded-xl font-bold text-sm cursor-pointer">Salir</button>
+        </FullScreenMessage>
+      );
+    }
+
+    return (
+      <div className="min-h-screen flex flex-col bg-[#FAF9F6] font-sans">
+        <header className="glass mx-2 sm:mx-4 lg:mx-6 mt-4 mb-6 rounded-[2rem] px-6 py-2.5 shrink-0 sticky top-4 z-50 flex justify-between items-center gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <img src="/chef-logo.jpg" alt="Gaspacho" className="w-10 h-10 rounded-2xl shadow-lg shadow-slate-200/50 object-cover shrink-0" />
+            <span className="text-brand-navy text-lg sm:text-xl font-display font-black tracking-tighter leading-none truncate">
+              UNIR CLIENTES<span className="text-brand-red">.</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <button
+              onClick={() => window.location.assign('/')}
+              className="p-2 sm:px-4 sm:py-2 rounded-xl text-slate-500 hover:text-brand-navy hover:bg-slate-100 transition-colors flex items-center gap-2 text-sm font-bold tracking-wider uppercase cursor-pointer"
+              title="Volver a la app"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Volver</span>
+            </button>
+            <HeaderActions onLogout={onLogout} onChangePassword={() => setShowChangePassword(true)} />
+          </div>
+        </header>
+        <main className="flex-1 min-h-0">
+          <UnirClientesView />
+        </main>
+        {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF9F6] font-sans selection:bg-slate-900 selection:text-white">
