@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parsePedidoItems, formatPedidoText, rankDishes, sortByDeliveryTime } from '../src/lib/pedidos.js';
-import { toLocalISODate, getDeliveryDate, filterOrdersByDateRange, formatFilterLabel } from '../src/lib/dates.js';
+import { toLocalISODate, getDeliveryDate, filterOrdersByDateRange, formatFilterLabel, filterNeedsHistory } from '../src/lib/dates.js';
 import { computeKPIs, computeAnalyticsKPIs } from '../src/store/kpis.js';
 
 function pedido(overrides) {
@@ -79,6 +79,15 @@ test('formatFilterLabel', () => {
     assert.equal(formatFilterLabel('2026-10-27', now), 'HOY');
     assert.equal(formatFilterLabel('2026-10-26', now), 'AYER');
     assert.equal(formatFilterLabel('2026-10-01', now), '01/10');
+});
+
+test('filterNeedsHistory: solo "hoy" se resuelve con los pedidos de hoy', () => {
+    const now = new Date(2026, 9, 27, 18, 0);
+    assert.equal(filterNeedsHistory('dia', now), false);
+    assert.equal(filterNeedsHistory('2026-10-27', now), false);
+    assert.equal(filterNeedsHistory('2026-10-26', now), true);
+    assert.equal(filterNeedsHistory('semana', now), true);
+    assert.equal(filterNeedsHistory('mes', now), true);
 });
 
 test('computeKPIs solo cuenta pedidos despachados', () => {

@@ -9,6 +9,7 @@ import KitchenView from './views/KitchenView';
 import AnalyticsView from './views/AnalyticsView';
 import LoginView from './views/LoginView';
 import UnirClientesView from './views/UnirClientesView';
+import HistoryGate, { HistoryStatusPill } from './components/HistoryGate';
 
 import { ChefHat, LayoutDashboard, Menu, X, TrendingUp, Loader2, LogOut, KeyRound, AlertTriangle, ArrowLeft } from 'lucide-react';
 
@@ -128,7 +129,9 @@ function AppContent({ userRole, onLogout }) {
           </div>
         </header>
         <main className="flex-1 min-h-0">
-          <UnirClientesView />
+          <HistoryGate>
+            <UnirClientesView />
+          </HistoryGate>
         </main>
         {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
       </div>
@@ -205,8 +208,14 @@ function AppContent({ userRole, onLogout }) {
       <main className="flex-1 min-h-0 overflow-hidden">
         {view === 'owner' && !isKitchen && <OwnerView />}
         {view === 'kitchen' && <KitchenView />}
-        {view === 'analytics' && !isKitchen && <AnalyticsView />}
+        {view === 'analytics' && !isKitchen && (
+          <HistoryGate>
+            <AnalyticsView />
+          </HistoryGate>
+        )}
       </main>
+
+      {view === 'owner' && !isKitchen && <HistoryStatusPill />}
 
       {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
     </div>

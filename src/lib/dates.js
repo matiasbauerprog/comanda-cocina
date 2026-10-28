@@ -69,6 +69,13 @@ export function filterOrdersByDateRange(pedidos, filter, now = new Date()) {
     });
 }
 
+// Al abrir la app solo se traen los pedidos de hoy y los pendientes; cualquier otro
+// filtro necesita el historial completo.
+export function filterNeedsHistory(filter, now = new Date()) {
+    if (filter === 'dia') return false;
+    return !(isISODate(filter) && filter === toLocalISODate(now));
+}
+
 // Fecha que muestra el calendario como seleccionada para un filtro.
 export function filterToCalendarDate(filter) {
     return isISODate(filter) ? filter : toLocalISODate();

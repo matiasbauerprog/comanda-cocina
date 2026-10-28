@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { filterOrdersByDateRange } from '../lib/dates';
+import { filterOrdersByDateRange, filterNeedsHistory, getDateRange } from '../lib/dates';
 import { sortByDeliveryTime } from '../lib/pedidos';
 import { toClienteRow } from '../lib/clientes';
 import { StoreContext } from './useStore';
@@ -18,13 +18,11 @@ function parsePedidoRecord(row) {
     };
 }
 
-// Trae todas las filas de una tabla, página por página.
-async function fetchAll(table, orderColumn) {
+// Trae todas las filas de una tabla (o las que pasen `applyFilter`), página por página.
+async function fetchAll(table, orderColumn, applyFilter = (query) => query) {
     const rows = [];
     for (let from = 0; ; from += PAGE_SIZE) {
-        const { data, error } = await supabase
-            .from(table)
-            .select('*')
+        const { data, error } = await applyFilter(supabase.from(table).select('*'))
             .order(orderColumn, { ascending: false })
             .order('id', { ascending: true })
             .range(from, from + PAGE_SIZE - 1);
@@ -32,6 +30,13 @@ async function fetchAll(table, orderColumn) {
         rows.push(...data);
         if (data.length < PAGE_SIZE) return rows;
     }
+}
+
+// Carga inicial liviana: los pedidos sin despachar (de cualquier día) y los de hoy.
+// El resto del historial se trae con ensureHistory cuando una vista lo necesita.
+function recentPedidos(query) {
+    const since = getDateRange('dia').since.toISOString();
+    return query.or(`estado.neq.listo,timestamp_creacion.gte."${since}"`);
 }
 
 function applyChange(setter, payload, parse = (r) => r) {
@@ -64,15 +69,22 @@ export function StoreProvider({ children, active = false }) {
     const [platos, setPlatos] = useState([]);
     const [clientes, setClientes] = useState([]);
     const [reloadKey, setReloadKey] = useState(0);
+    // 'idle' | 'loading' | 'loaded'. historyWantedRef sigue pidiendo el historial
+    // completo si el realtime se reconecta; sessionRef descarta respuestas de una
+    // sesión que ya se cerró.
+    const [historyStatus, setHistoryStatus] = useState('idle');
+    const historyWantedRef = useRef(false);
+    const sessionRef = useRef(0);
 
     useEffect(() => {
+        sessionRef.current++;
         if (!active) return;
 
         let cancelled = false;
         const fetchData = async () => {
             try {
                 const [pedidosRows, platosRows, clientesRows] = await Promise.all([
-                    fetchAll('pedidos', 'timestamp_creacion'),
+                    fetchAll('pedidos', 'timestamp_creacion', historyWantedRef.current ? undefined : recentPedidos),
                     fetchAll('platos', 'created_at'),
                     fetchAll('clientes', 'created_at'),
                 ]);
@@ -105,6 +117,8 @@ export function StoreProvider({ children, active = false }) {
 
         return () => {
             cancelled = true;
+            historyWantedRef.current = false;
+            setHistoryStatus('idle');
             supabase.removeChannel(channel);
             // Al cerrar sesión no quedan datos del usuario anterior en memoria
             setIsInitialized(false);
@@ -113,6 +127,24 @@ export function StoreProvider({ children, active = false }) {
             setClientes([]);
         };
     }, [active, reloadKey]);
+
+    const ensureHistory = useCallback(async () => {
+        if (historyWantedRef.current) return;
+        historyWantedRef.current = true;
+        const session = sessionRef.current;
+        setHistoryStatus('loading');
+        try {
+            const rows = await fetchAll('pedidos', 'timestamp_creacion');
+            if (session !== sessionRef.current) return;
+            setPedidos(rows.map(parsePedidoRecord));
+            setHistoryStatus('loaded');
+        } catch (err) {
+            if (session !== sessionRef.current) return;
+            console.error('Error cargando el historial:', err);
+            historyWantedRef.current = false;
+            setHistoryStatus('error');
+        }
+    }, []);
 
     const reload = useCallback(() => {
         setLoadError(null);
@@ -178,16 +210,19 @@ export function StoreProvider({ children, active = false }) {
     // === Filtros independientes ===
 
     // Historial del día (pestaña "Total del día")
-    const [dailyFilter, setDailyFilter] = useState('dia');
+    const [dailyFilter, setDailyFilterState] = useState('dia');
+    const setDailyFilter = useCallback((f) => { setDailyFilterState(f); if (filterNeedsHistory(f)) ensureHistory(); }, [ensureHistory]);
     const pedidosHoy = useMemo(() => filterOrdersByDateRange(pedidos, dailyFilter), [pedidos, dailyFilter]);
 
     // 1. Ventas (Total Vendido y modal de ventas)
-    const [salesFilter, setSalesFilter] = useState('dia');
+    const [salesFilter, setSalesFilterState] = useState('dia');
+    const setSalesFilter = useCallback((f) => { setSalesFilterState(f); if (filterNeedsHistory(f)) ensureHistory(); }, [ensureHistory]);
     const salesOrders = useMemo(() => filterOrdersByDateRange(pedidos, salesFilter), [pedidos, salesFilter]);
     const salesKPIs = useMemo(() => computeKPIs(salesOrders), [salesOrders]);
 
     // 2. Ranking (Pedidos Despachados y modal de ranking)
-    const [rankingFilter, setRankingFilter] = useState('dia');
+    const [rankingFilter, setRankingFilterState] = useState('dia');
+    const setRankingFilter = useCallback((f) => { setRankingFilterState(f); if (filterNeedsHistory(f)) ensureHistory(); }, [ensureHistory]);
     const rankingOrders = useMemo(() => filterOrdersByDateRange(pedidos, rankingFilter), [pedidos, rankingFilter]);
     const rankingKPIs = useMemo(() => computeKPIs(rankingOrders), [rankingOrders]);
 
@@ -200,6 +235,8 @@ export function StoreProvider({ children, active = false }) {
         isInitialized,
         loadError,
         reload,
+        historyStatus,
+        ensureHistory,
 
         pedidos,
         pedidosActivos,
