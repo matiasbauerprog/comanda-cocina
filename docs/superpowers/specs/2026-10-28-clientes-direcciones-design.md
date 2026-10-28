@@ -94,6 +94,7 @@ La solución es que un cliente tenga varias direcciones, que las listas de gesti
 ### 6. SQL
 
 Un archivo nuevo `supabase/clientes-direcciones.sql` (el dueño de la app lo corre una vez en el SQL Editor) con:
+- **Primero, respaldo:** `create table clientes_backup_20261028 as select * from clientes;` y lo mismo para `pedidos`. Supabase tiene datos reales del cliente; el script no borra nada y el respaldo permite recuperar cualquier unión hecha por error. Las tablas de respaldo quedan con RLS activado y sin políticas, así no son accesibles desde la app.
 - `alter table` de la columna `direcciones` + migración de `direccion`.
 - La función `unir_clientes`.
 
