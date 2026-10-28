@@ -60,6 +60,7 @@ export function computeAnalyticsKPIs(pedidosRango, pedidosTodos) {
     return {
         totalVendido,
         distribucionPago,
+        cantidadPedidos,
         ticketPromedio,
         topPlatos,
         ventasPorHora,

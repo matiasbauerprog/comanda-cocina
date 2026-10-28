@@ -45,6 +45,7 @@ test('computeAnalyticsKPIs incluye la distribución de pago', () => {
     const p = (monto, metodo_pago) => ({ estado: 'listo', monto, metodo_pago, pedido: 'Flan', timestamp_creacion: new Date().toISOString(), cliente: { nombre: 'A' } });
     const k = computeAnalyticsKPIs([p(300, 'Efectivo'), p(100, 'Tarjeta')], []);
     assert.deepEqual(k.distribucionPago, { efectivo: 300, tarjeta: 100, pctEfectivo: 75 });
+    assert.equal(k.cantidadPedidos, 2);
     assert.deepEqual(computeAnalyticsKPIs([], []).distribucionPago, { efectivo: 0, tarjeta: 0, pctEfectivo: 0 });
 });
 
