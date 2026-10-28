@@ -14,10 +14,12 @@ export default function PlatoPicker({ platos, lines, masPedidos, onAdd, onManage
     const results = searchPlatos(platos, query);
     const qtyOf = (plato) => lines.find(l => l.platoId === plato.id)?.cantidad ?? 0;
 
-    const add = (plato) => {
+    // Solo se vuelve al buscador si se agregó con Enter: en el celular, enfocar
+    // después de un toque abriría el teclado cada vez.
+    const add = (plato, { refocus = false } = {}) => {
         onAdd(plato);
         setQuery('');
-        inputRef.current?.focus();
+        if (refocus) inputRef.current?.focus();
     };
 
     return (
@@ -39,7 +41,7 @@ export default function PlatoPicker({ platos, lines, masPedidos, onAdd, onManage
                         onKeyDown={e => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
-                                if (results[0]) add(results[0]);
+                                if (results[0]) add(results[0], { refocus: true });
                             } else if (e.key === 'Escape') {
                                 setQuery('');
                             }

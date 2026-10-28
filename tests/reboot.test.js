@@ -61,3 +61,9 @@ test('pedidoDisplayItems conserva el nombre tal cual se cargó', () => {
     assert.deepEqual(pedidoDisplayItems('(2) Milanesa napolitana, Flan'), [{ qty: 2, name: 'Milanesa napolitana' }, { qty: 1, name: 'Flan' }]);
     assert.deepEqual(pedidoDisplayItems(''), []);
 });
+
+test('topPlatos junta variantes con tildes o espacios en un solo plato', () => {
+    const menu = [{ id: 1, nombre: 'Puré', monto: 1 }, { id: 2, nombre: 'Milanesa napolitana', monto: 1 }, { id: 3, nombre: 'Flan', monto: 1 }];
+    const pedidos = [{ pedido: 'Pure, (2) Puré' }, { pedido: 'Milanesa  napolitana, Milanesa napolitana' }, { pedido: '(2) Flan' }, { pedido: 'Milanesa napolitana, Milanesa napolitana' }];
+    assert.deepEqual(topPlatos(pedidos, menu).map(p => p.id), [2, 1, 3]);
+});

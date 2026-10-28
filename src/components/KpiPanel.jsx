@@ -42,7 +42,7 @@ export default function HeaderKpis() {
 
     return (
         <>
-            <div className="flex items-center gap-5">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:gap-x-5 min-w-0">
                 <div className="flex items-baseline gap-1.5">
                     <button type="button" onClick={() => setModal('ventas')} className="font-mono text-sm font-semibold text-ink hover:text-brand-navy cursor-pointer">
                         {formatMoney(totalVendido)}

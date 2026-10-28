@@ -56,10 +56,16 @@ export function rankDishes(pedidos) {
 // de pedidos viejos que ya no están en la carta se descartan.
 export function topPlatos(pedidos, platos, n = 6) {
     const carta = new Map(platos.map(p => [normalizeSearch(p.nombre), p]));
-    return rankDishes(pedidos)
-        .map(({ name }) => carta.get(normalizeSearch(name)))
-        .filter(Boolean)
-        .slice(0, n);
+    // Variantes como "Pure" y "Puré" son el mismo plato: se suman por plato de la carta
+    const counts = new Map();
+    for (const { name, count } of rankDishes(pedidos)) {
+        const plato = carta.get(normalizeSearch(name));
+        if (plato) counts.set(plato, (counts.get(plato) || 0) + count);
+    }
+    return [...counts]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, n)
+        .map(([plato]) => plato);
 }
 
 // Pedidos con horario de entrega primero (el más próximo arriba), después el resto.

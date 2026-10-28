@@ -193,8 +193,8 @@ function AppContent({ userRole, onLogout }) {
             <HeaderActions onLogout={onLogout} onChangePassword={openChangePassword} />
           </div>
           {/* En celular los KPIs van en su propia fila */}
-          <div className="order-4 w-full flex md:hidden items-center justify-between gap-4">
-            <LiveIndicator />
+          <div className="order-4 w-full flex md:hidden flex-wrap items-center justify-between gap-x-4 gap-y-2 min-w-0">
+            <span className="hidden min-[420px]:block"><LiveIndicator /></span>
             <HeaderKpis />
           </div>
         </div>
