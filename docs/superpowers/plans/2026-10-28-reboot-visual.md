@@ -112,7 +112,7 @@ test('computeAnalyticsKPIs incluye la distribución de pago', () => {
   - `<Segmented options={[{id, label, icon?}]} value onChange size="sm|md" />` — pastilla del diseño (track `bg-track`, activo blanco con sombra suave).
   - `ToastProvider` (envuelve la app en `App.jsx`) y `useToast() -> (msg: string) => void` — aviso abajo al centro del diseño, 2,6 s.
 
-- [ ] **Step 1: Implement** tokens y fuentes (quitar Outfit/Inter/Playfair, `.grep -rnE "glass|font-script|slate-|gray-|Outfit|Inter" src`, `.glass-card` y el fondo con gradientes cuando ya nadie los use — si aún se usan, se quitan en Task 8), `theme-color` y `background_color` a `#F4F2EC` en `index.html`/`manifest.json`, y los tres módulos.
+- [ ] **Step 1: Implement** tokens y fuentes (quitar Outfit/Inter/Playfair, `.glass`, `.glass-card` y el fondo con gradientes cuando ya nadie los use — si aún se usan, se quitan en Task 8), `theme-color` y `background_color` a `#F4F2EC` en `index.html`/`manifest.json`, y los tres módulos.
 - [ ] **Step 2: Lint/test/build y commit** — `git commit -m "Tema del reboot: tokens, fuentes y piezas compartidas"`
 
 ### Task 3: Cabecera y navegación
@@ -178,6 +178,6 @@ test('computeAnalyticsKPIs incluye la distribución de pago', () => {
 - Modify: `src/views/LoginView.jsx`, `src/components/ChangePasswordModal.jsx`, `src/components/ManageModal.jsx`, `src/components/DireccionesEditor.jsx`, `src/components/HistoryGate.jsx`, `src/views/UnirClientesView.jsx`, `src/index.css`
 - Delete si quedó sin uso: `src/components/CustomDropdown.jsx`
 
-- [ ] **Step 1: Implement** el estilo nuevo en cada uno sin cambiar comportamiento (login con `Segmented` Gaspi / Comanda; modales con tarjeta blanca radio 18, borde `line`, sin blur). Quitar del CSS lo que nadie usa (`.grep -rnE "glass|font-script|slate-|gray-|Outfit|Inter" src`, `.glass-card`, gradientes, animaciones huérfanas — verificar con grep antes).
-- [ ] **Step 2:** `grep -rnE "glass|font-script|slate-|gray-|Outfit|Inter" src\|glass\|slate-" src` para encontrar restos del estilo viejo y migrarlos.
+- [ ] **Step 1: Implement** el estilo nuevo en cada uno sin cambiar comportamiento (login con `Segmented` Gaspi / Comanda; modales con tarjeta blanca radio 18, borde `line`, sin blur). Quitar del CSS lo que nadie usa (`.glass`, `.glass-card`, gradientes, animaciones huérfanas — verificar con grep antes).
+- [ ] **Step 2:** `grep -rnE "glass|font-script|slate-|gray-" src` para encontrar restos del estilo viejo y migrarlos.
 - [ ] **Step 3: Lint/test/build y commit** — `git commit -m "Reboot: login, modales y limpieza del estilo viejo"`
