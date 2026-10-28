@@ -1,43 +1,69 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
-    --font-sans: 'Inter', system-ui, sans-serif;
-    --font-display: 'Outfit', sans-serif;
-    --font-script: 'Playfair Display', serif;
+    --font-sans: 'Geist', system-ui, sans-serif;
+    --font-display: 'Bricolage Grotesque', 'Geist', sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
 
-    /* Premium monochrome & Slate system */
-    --color-bg: #FAF9F6;
-    --color-surface: #ffffff;
-    --color-border: #f1f5f9;
+    /* Superficies y bordes (reboot) */
+    --color-paper: #F4F2EC;
+    --color-surface: #FFFFFF;
+    --color-soft: #FAF8F4;
+    --color-track: #EAE6DC;
+    --color-line: #E6E2D8;
+    --color-line-strong: #DDD8CC;
+    --color-line-soft: #EFEBE3;
 
+    /* Texto */
+    --color-ink: #0B1B2E;
+    --color-ink-2: #5C6470;
+    --color-ink-3: #7A7F88;
+    --color-ink-4: #9A9EA6;
+
+    /* Marca */
+    --color-brand-navy: #002855;
+    --color-brand-red: #E60000;
+    --color-brand-yellow: #FFD700;
+
+    /* Métodos de pago y estado */
+    --color-cash: #0E6B42;
+    --color-cash-bg: #E3F3EA;
+    --color-card: #002855;
+    --color-card-bg: #E8EEF6;
+    --color-live: #12A05C;
+    --color-danger-bg: #FBE7E7;
+    --color-danger: #B00000;
+    --color-note-bg: #FFF6CC;
+    --color-note: #5E4500;
+
+    /* Comanda (modo oscuro) */
+    --color-night: #0C1522;
+    --color-night-card: #142033;
+    --color-night-line: #22324A;
+    --color-night-ink: #F4F2EC;
+    --color-night-ink-2: #8796AB;
+
+    /* Estilo anterior: se quita cuando ningún componente lo use */
+    --color-bg: #F4F2EC;
+    --color-border: #E6E2D8;
     --color-slate-900: #0f172a;
     --color-slate-500: #64748b;
     --color-slate-400: #94a3b8;
     --color-slate-100: #f1f5f9;
-
-    /* Semantic Mappings */
-    --color-text: #0f172a;
-    --color-text-secondary: #64748b;
-
-    /* Gaspacho Brand */
-    --color-brand-navy: #002855;
-    --color-brand-red: #E60000;
-    --color-brand-yellow: #FFD700;
 }
 
 body {
-    background-color: #FAF9F6;
-    background-image:
-        radial-gradient(at 0% 0%, rgba(0, 40, 85, 0.03) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(230, 0, 0, 0.02) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(255, 215, 0, 0.04) 0px, transparent 50%),
-        radial-gradient(at 0% 100%, rgba(0, 40, 85, 0.02) 0px, transparent 50%);
-    background-attachment: fixed;
-    color: var(--color-slate-900);
+    background-color: var(--color-paper);
+    color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--color-ink-4);
 }
 
 /* Custom scrollbar */
