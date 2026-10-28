@@ -4,28 +4,33 @@ import { matchesSearch } from '../lib/clientes';
 
 const defaultSearchTexts = (item) => [item.nombre];
 
-function emptyForm(fields) {
-    return fields.reduce((acc, f) => ({ ...acc, [f.key]: '' }), {});
+function emptyForm(fields, extraField) {
+    const form = fields.reduce((acc, f) => ({ ...acc, [f.key]: '' }), {});
+    if (extraField) form[extraField.key] = extraField.empty;
+    return form;
 }
 
 // Modal para dar de alta, editar y borrar registros simples (clientes, platos).
 // onAdd / onUpdate devuelven true si se guardó, para saber si limpiar el formulario.
-export default function ManageModal({ title, items, onAdd, onDelete, onUpdate, onClose, fields, getSearchTexts = defaultSearchTexts }) {
+// extraField agrega un campo con editor propio (ej. las direcciones de un cliente) y
+// renderDetail reemplaza la línea de detalle de cada registro.
+export default function ManageModal({ title, items, onAdd, onDelete, onUpdate, onClose, fields, extraField, renderDetail, getSearchTexts = defaultSearchTexts }) {
     const [query, setQuery] = useState('');
-    const [form, setForm] = useState(() => emptyForm(fields));
+    const [form, setForm] = useState(() => emptyForm(fields, extraField));
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState({});
 
     const handleAdd = async () => {
         const mainField = fields[0].key;
         if (!form[mainField]?.trim()) return;
-        if (await onAdd(form)) setForm(emptyForm(fields));
+        if (await onAdd(form)) setForm(emptyForm(fields, extraField));
     };
 
     const startEdit = (item) => {
         setEditingId(item.id);
         const ef = {};
         fields.forEach(f => { ef[f.key] = item[f.key] || ''; });
+        if (extraField) ef[extraField.key] = extraField.fromItem(item);
         setEditForm(ef);
     };
 
@@ -74,6 +79,11 @@ export default function ManageModal({ title, items, onAdd, onDelete, onUpdate, o
                             AGREGAR
                         </button>
                     </div>
+                    {extraField && (
+                        <div className="mt-2">
+                            {extraField.render(form[extraField.key], v => setForm(prev => ({ ...prev, [extraField.key]: v })))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Buscador */}
@@ -122,14 +132,23 @@ export default function ManageModal({ title, items, onAdd, onDelete, onUpdate, o
                                                 <X className="w-4 h-4" />
                                             </button>
                                         </div>
+                                        {extraField && (
+                                            <div className="basis-full">
+                                                {extraField.render(editForm[extraField.key], v => setEditForm(prev => ({ ...prev, [extraField.key]: v })))}
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     /* View mode */
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1 min-w-0">
                                             <span className="font-bold text-gray-900 text-sm block truncate">{item.nombre}</span>
-                                            {item.direccion && <span className="text-xs text-gray-400 truncate block">{item.direccion}</span>}
-                                            {item.monto !== undefined && <span className="text-xs font-display font-bold text-gray-500">${Number(item.monto).toLocaleString('es-AR')}</span>}
+                                            {renderDetail ? renderDetail(item) : (
+                                                <>
+                                                    {item.direccion && <span className="text-xs text-gray-400 truncate block">{item.direccion}</span>}
+                                                    {item.monto !== undefined && <span className="text-xs font-display font-bold text-gray-500">${Number(item.monto).toLocaleString('es-AR')}</span>}
+                                                </>
+                                            )}
                                         </div>
                                         <div className="flex gap-1 shrink-0">
                                             <button

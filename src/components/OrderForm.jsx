@@ -5,11 +5,34 @@ import ManageModal from './ManageModal';
 import CustomDropdown from './CustomDropdown';
 import { useIsMobile, isMobileViewport } from '../hooks/useIsMobile';
 import { formatPedidoText } from '../lib/pedidos';
+import { getDirecciones } from '../lib/clientes';
+import DireccionesEditor from './DireccionesEditor';
 
 const METODOS_PAGO = [
     { id: 'Efectivo' },
     { id: 'Tarjeta' }
 ];
+
+// Gestión de clientes: cada cliente tiene una lista de direcciones.
+const CLIENTE_DIRECCIONES_FIELD = {
+    key: 'direcciones',
+    empty: [{ etiqueta: '', direccion: '' }],
+    fromItem: getDirecciones,
+    render: (value, onChange) => <DireccionesEditor value={value} onChange={onChange} />,
+};
+
+function renderClienteDirecciones(cliente) {
+    return getDirecciones(cliente).map((d, i) => (
+        <span key={i} className="text-xs text-gray-400 truncate block">
+            {d.etiqueta && <strong className="text-gray-500">{d.etiqueta} · </strong>}
+            {d.direccion}
+        </span>
+    ));
+}
+
+function clienteSearchTexts(cliente) {
+    return [cliente.nombre, ...getDirecciones(cliente).flatMap(d => [d.etiqueta, d.direccion])];
+}
 
 /* ───── Order Form ───── */
 export default function OrderForm() {
@@ -331,14 +354,16 @@ export default function OrderForm() {
                 <ManageModal
                     title="Gestionar Clientes"
                     items={clientes}
-                    onAdd={(data) => addCliente({ nombre: data.nombre, direccion: data.direccion })}
+                    onAdd={addCliente}
                     onDelete={deleteCliente}
                     onUpdate={updateCliente}
                     onClose={() => setShowClientesModal(false)}
                     fields={[
                         { key: 'nombre', label: 'Nombre', placeholder: 'Nombre del cliente', grow: true },
-                        { key: 'direccion', label: 'Dirección', placeholder: 'Dirección', grow: true },
                     ]}
+                    extraField={CLIENTE_DIRECCIONES_FIELD}
+                    renderDetail={renderClienteDirecciones}
+                    getSearchTexts={clienteSearchTexts}
                 />
             )}
 
