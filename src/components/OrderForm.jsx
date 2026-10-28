@@ -5,7 +5,7 @@ import ManageModal from './ManageModal';
 import CustomDropdown from './CustomDropdown';
 import { useIsMobile, isMobileViewport } from '../hooks/useIsMobile';
 import { formatPedidoText } from '../lib/pedidos';
-import { getDirecciones, direccionLabel, hasDireccion, addDireccion, normalizeSearch } from '../lib/clientes';
+import { getDirecciones, direccionLabel, hasDireccion, addDireccion } from '../lib/clientes';
 import DireccionesEditor from './DireccionesEditor';
 
 const METODOS_PAGO = [
@@ -213,7 +213,7 @@ export default function OrderForm() {
                             {(clienteDirecciones.length > 0 || canSaveDireccion) && (
                                 <div className="flex flex-wrap gap-2 -mt-1">
                                     {clienteDirecciones.map((d, i) => {
-                                        const isActive = normalizeSearch(d.direccion) === normalizeSearch(direccion);
+                                        const isActive = hasDireccion([d], direccion);
                                         return (
                                             <button
                                                 key={i}

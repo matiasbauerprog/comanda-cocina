@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, Users, Merge, X } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { clienteKey } from '../lib/pedidos';
-import { suggestGroups, mergeGroup, matchesSearch, getDirecciones } from '../lib/clientes';
+import { suggestGroups, mergeGroup, matchesSearch, getDirecciones, findNameCollision } from '../lib/clientes';
 
 const DISMISSED_KEY = 'gaspacho-unir-descartados';
 
@@ -28,7 +28,7 @@ const inputClass = "w-full bg-white border border-slate-200 rounded-full px-4 py
 // Formulario de unión para un conjunto de clientes. `candidatos` es la lista que se
 // puede tildar; al cambiar los tildados se recalcula la propuesta (nombre editado se conserva).
 function MergeCard({ candidatos, onDismiss, onDone }) {
-    const { pedidos, unirClientes } = useStore();
+    const { clientes, pedidos, unirClientes } = useStore();
     const [selectedIds, setSelectedIds] = useState(() => candidatos.map(c => c.id));
     const selected = candidatos.filter(c => selectedIds.includes(c.id));
     const [nombre, setNombre] = useState(() => mergeGroup(candidatos).nombre);
@@ -39,7 +39,8 @@ function MergeCard({ candidatos, onDismiss, onDone }) {
     const direcciones = propuesta.direcciones.map(d => ({ ...d, etiqueta: etiquetas[d.direccion] ?? d.etiqueta }));
     const nombresKeys = propuesta.nombresViejos.map(clienteKey);
     const pedidosAfectados = pedidos.filter(p => nombresKeys.includes(clienteKey(p.cliente.nombre))).length;
-    const canMerge = selected.length >= 2 && nombre.trim() !== '' && !isSaving;
+    const collision = findNameCollision(clientes, selectedIds, nombre);
+    const canMerge = selected.length >= 2 && nombre.trim() !== '' && !collision && !isSaving;
 
     const toggle = (id) =>
         setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
@@ -99,6 +100,13 @@ function MergeCard({ candidatos, onDismiss, onDone }) {
                         ))}
                     </div>
                 </div>
+            )}
+
+            {collision && (
+                <p className="text-xs font-bold text-brand-red">
+                    Ya existe otro cliente llamado «{collision.nombre}» que no está en esta unión. Elegí otro nombre final
+                    (por ejemplo con el apellido) para no mezclar sus pedidos.
+                </p>
             )}
 
             <p className="text-xs text-slate-400">

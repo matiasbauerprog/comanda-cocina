@@ -27,9 +27,14 @@ export function direccionLabel(d) {
     return d.etiqueta?.trim() || d.direccion;
 }
 
+// Para comparar direcciones también se ignora la puntuación: "Av. Pérez, 12" = "av perez 12".
+function normalizeDireccion(text) {
+    return normalizeSearch((text || '').replace(/\p{P}/gu, ' '));
+}
+
 export function hasDireccion(direcciones, texto) {
-    const key = normalizeSearch(texto);
-    return direcciones.some(d => normalizeSearch(d.direccion) === key);
+    const key = normalizeDireccion(texto);
+    return direcciones.some(d => normalizeDireccion(d.direccion) === key);
 }
 
 export function addDireccion(direcciones, texto, etiqueta = '') {
@@ -88,4 +93,11 @@ export function mergeGroup(clientes) {
         direcciones,
         nombresViejos: sorted.map(c => c.nombre),
     };
+}
+
+// Otro cliente (fuera de los que se unen) con el mismo nombre final: si se une igual,
+// sus pedidos quedarían mezclados con los de esa otra persona.
+export function findNameCollision(clientes, selectedIds, nombre) {
+    const key = normalizeSearch(nombre);
+    return clientes.find(c => !selectedIds.includes(c.id) && normalizeSearch(c.nombre) === key) ?? null;
 }

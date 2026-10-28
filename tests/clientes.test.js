@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    matchesSearch, getDirecciones, addDireccion, toClienteRow, suggestGroups, mergeGroup,
+    matchesSearch, getDirecciones, addDireccion, hasDireccion, toClienteRow, suggestGroups, mergeGroup, findNameCollision,
 } from '../src/lib/clientes.js';
 
 test('matchesSearch ignora mayúsculas y tildes', () => {
@@ -61,4 +61,24 @@ test('mergeGroup conserva el más antiguo, etiqueta y deduplica', () => {
         { etiqueta: 'trabajo', direccion: 'Oficina 9' },
     ]);
     assert.deepEqual(m.nombresViejos, ['Mariana casa', 'Mariana trabajo', 'Mariana']);
+});
+
+test('hasDireccion ignora puntuación: "Av. Siempreviva 742" = "av siempreviva 742 "', () => {
+    assert.equal(hasDireccion([{ etiqueta: '', direccion: 'Av. Siempreviva 742' }], 'av siempreviva 742 '), true);
+    const m = mergeGroup([
+        { id: 'a', nombre: 'Ana casa', created_at: '2026-01-01', direccion: 'Av. Siempreviva 742' },
+        { id: 'b', nombre: 'Ana', created_at: '2026-02-01', direccion: 'av siempreviva, 742' },
+    ]);
+    assert.equal(m.direcciones.length, 1);
+});
+
+test('findNameCollision detecta otro cliente (no tildado) con el nombre final', () => {
+    const c = [
+        { id: 1, nombre: 'Juan' },
+        { id: 2, nombre: 'Juan Pérez' },
+        { id: 3, nombre: 'Juan Perez casa' },
+    ];
+    assert.equal(findNameCollision(c, [2, 3], ' juan ')?.id, 1);
+    assert.equal(findNameCollision(c, [1, 2, 3], 'Juan'), null);
+    assert.equal(findNameCollision(c, [2, 3], 'Juan Pérez'), null);
 });
