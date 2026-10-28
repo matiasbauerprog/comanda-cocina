@@ -20,6 +20,9 @@ React + Vite + Tailwind, con Supabase como base de datos, autenticación y realt
       caracteres.
    2. **SQL Editor**: abrir `supabase/setup.sql`, reemplazar los dos emails del paso 4 y
       correrlo. Activa RLS, borra las políticas viejas y asigna el rol de cada usuario.
+   3. **SQL Editor**: correr `supabase/clientes-direcciones.sql` (una vez, antes de publicar
+      la versión con varias direcciones por cliente). Hace un respaldo de clientes y pedidos,
+      agrega la columna `direcciones` y crea la función `unir_clientes`.
 
 4. Levantar la app:
 
@@ -55,6 +58,6 @@ src/
   hooks/       useIsMobile, useOrderUrgency
   components/  formulario, comanda, KPIs, calendario, modales
   views/       Login, Gestor, Cocina, Estadísticas
-supabase/      setup.sql (RLS y roles)
+supabase/      setup.sql (RLS y roles), clientes-direcciones.sql (direcciones y unión)
 tests/         tests de la lógica
 ```
