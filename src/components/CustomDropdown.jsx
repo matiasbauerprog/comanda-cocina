@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
+import { matchesSearch } from '../lib/clientes';
 
 // Selector con buscador. Si recibe iconMinus/iconPlus, cada opción tiene un control
 // de cantidad y onChange recibe (id, cantidad). `ref` apunta al botón (para darle foco).
@@ -13,10 +14,7 @@ export default function CustomDropdown({ ref, placeholder, options, value, onCha
     const hasQuantityControls = !!(IconMinus && IconPlus);
     const selectedOption = options.find(opt => opt.id === value);
 
-    const filteredOptions = options.filter(opt =>
-        opt.label.toLowerCase().includes(search.toLowerCase()) ||
-        (opt.detail && opt.detail.toLowerCase().includes(search.toLowerCase()))
-    );
+    const filteredOptions = options.filter(opt => matchesSearch(search, opt.label, opt.detail));
 
     // Summary text for quantity mode
     const totalSelected = hasQuantityControls

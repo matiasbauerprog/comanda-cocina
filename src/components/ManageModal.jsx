@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { X, Trash2, Edit3, Check } from 'lucide-react';
+import { X, Trash2, Edit3, Check, Search } from 'lucide-react';
+import { matchesSearch } from '../lib/clientes';
+
+const defaultSearchTexts = (item) => [item.nombre];
 
 function emptyForm(fields) {
     return fields.reduce((acc, f) => ({ ...acc, [f.key]: '' }), {});
@@ -7,7 +10,8 @@ function emptyForm(fields) {
 
 // Modal para dar de alta, editar y borrar registros simples (clientes, platos).
 // onAdd / onUpdate devuelven true si se guardó, para saber si limpiar el formulario.
-export default function ManageModal({ title, items, onAdd, onDelete, onUpdate, onClose, fields }) {
+export default function ManageModal({ title, items, onAdd, onDelete, onUpdate, onClose, fields, getSearchTexts = defaultSearchTexts }) {
+    const [query, setQuery] = useState('');
     const [form, setForm] = useState(() => emptyForm(fields));
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState({});
@@ -32,6 +36,8 @@ export default function ManageModal({ title, items, onAdd, onDelete, onUpdate, o
     const handleDelete = (item) => {
         if (window.confirm(`¿Eliminar "${item.nombre}"?`)) onDelete(item.id);
     };
+
+    const visibleItems = items.filter(item => matchesSearch(query, ...getSearchTexts(item)));
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -70,12 +76,29 @@ export default function ManageModal({ title, items, onAdd, onDelete, onUpdate, o
                     </div>
                 </div>
 
+                {/* Buscador */}
+                {items.length > 0 && (
+                    <div className="px-5 pt-3">
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                            <input
+                                value={query}
+                                onChange={e => setQuery(e.target.value)}
+                                placeholder="Buscar…"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-full pl-10 pr-4 py-2 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:border-slate-300 transition-all font-sans font-medium"
+                            />
+                        </div>
+                    </div>
+                )}
+
                 {/* List */}
                 <div className="overflow-y-auto flex-1 p-4 space-y-2">
                     {items.length === 0 ? (
                         <p className="text-gray-400 text-center py-8 italic text-sm">No hay registros</p>
+                    ) : visibleItems.length === 0 ? (
+                        <p className="text-gray-400 text-center py-8 italic text-sm">Sin resultados para «{query}»</p>
                     ) : (
-                        items.map(item => (
+                        visibleItems.map(item => (
                             <div key={item.id} className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100 hover:border-gray-200 transition-colors">
                                 {editingId === item.id ? (
                                     /* Edit mode */
